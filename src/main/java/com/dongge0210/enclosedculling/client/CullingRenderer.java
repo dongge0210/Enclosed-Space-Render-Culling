@@ -1,5 +1,6 @@
 package com.dongge0210.enclosedculling.client;
 
+import com.dongge0210.enclosedculling.room.RoomManager;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
@@ -15,6 +16,12 @@ public class CullingRenderer {
     private static final int CHECK_RADIUS = 3;
 
     public static boolean isPositionOccluded(Level world, BlockPos pos, Vec3 playerPos) {
+        // 房间-门系统剔除：玩家不可见房间直接不渲染
+        if (!RoomManager.isPositionVisible(world, pos, BlockPos.containing(playerPos))) {
+            cacheResult(pos, true);
+            return true;
+        }
+
         if (occlusionCache.containsKey(pos)) {
             return occlusionCache.get(pos);
         }
