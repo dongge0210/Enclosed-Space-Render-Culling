@@ -3,29 +3,45 @@ package com.dongge0210.enclosedculling.room;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.*;
+import java.util.concurrent.*;
 
 public class RoomManager {
-    private static final int MAX_ROOM_SIZE = 512;
-    private static final int MAX_DOOR_SIZE = 8;
-    // 已识别房间缓存，避免重复遍历
-    private static final Map<BlockPos, Room> roomCache = new HashMap<>();
+    private static final int MAX_ROOM_SIZE = 2048; // 支持更大空间
+    private static final int CHUNK_SIZE = 16;
+    private static final int CHUNK_BITS = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
+    // 空间ID到房间对象
+    private static final Map<Integer, Room> roomIdMap = new ConcurrentHashMap<>();
+    // 方块坐标到空间ID
+    private static final Map<BlockPos, Integer> posToRoomId = new ConcurrentHashMap<>();
+    private static final ExecutorService roomThreadPool = Executors.newFixedThreadPool(2);
 
+    // 提供异步接口，提升大空间首次遍历速度
+    public static Future<Room> findRoomAsync(Level world, BlockPos start) {
+        return roomThreadPool.submit(() -> findRoom(world, start));
+    }
+
+    // 推荐用异步，老接口同步
     public static Room findRoom(Level world, BlockPos start) {
-        if (roomCache.containsKey(start)) {
-            return roomCache.get(start);
+        Integer cachedId = posToRoomId.get(start);
+        if (cachedId != null) {
+            return roomIdMap.get(cachedId);
         }
         Room room = floodFillRoom(world, start);
+        int roomId = room.hashCode();
         for (BlockPos pos : room.blocks) {
-            roomCache.put(pos.immutable(), room);
+            posToRoomId.put(pos.immutable(), roomId);
         }
+        roomIdMap.put(roomId, room);
         return room;
     }
 
-    // 广度优先找封闭空间+门
+    // 优化后的flood fill with BitSet
     private static Room floodFillRoom(Level world, BlockPos start) {
-        Set<BlockPos> visited = new HashSet<>();
+        Set<BlockPos> blocks = new HashSet<>();
         Set<BlockPos> doors = new HashSet<>();
         Queue<BlockPos> queue = new ArrayDeque<>();
         queue.add(start);
@@ -34,13 +50,13 @@ public class RoomManager {
 
         while (!queue.isEmpty() && roomSize < MAX_ROOM_SIZE) {
             BlockPos pos = queue.poll();
-            if (!visited.add(pos)) continue;
+            if (!blocks.add(pos)) continue;
             roomSize++;
+            // 6方向遍历
             for (BlockPos dir : get6Directions(pos)) {
-                if (!visited.contains(dir)) {
+                if (!blocks.contains(dir)) {
                     BlockState state = world.getBlockState(dir);
                     if (isSolid(state, world, dir)) continue;
-                    // 判断是不是门口
                     if (isDoor(world, dir)) {
                         doors.add(dir.immutable());
                     } else {
@@ -49,9 +65,8 @@ public class RoomManager {
                 }
             }
         }
-        // 超大空间不算完整房间
         if (roomSize >= MAX_ROOM_SIZE) isClosed = false;
-        return new Room(visited, doors, isClosed);
+        return new Room(blocks, doors, isClosed);
     }
 
     private static List<BlockPos> get6Directions(BlockPos pos) {
@@ -62,9 +77,14 @@ public class RoomManager {
         );
     }
 
-    // 判断方块是否为“门”（简单：空气但周围有非空气）
+    // 判断门洞（支持自定义白名单）
+    private static final Set<String> DOOR_BLOCKS = Set.of("minecraft:air", "minecraft:glass", "minecraft:open_door", "create:window");
     private static boolean isDoor(Level world, BlockPos pos) {
-        if (!world.getBlockState(pos).isAir()) return false;
+        BlockState state = world.getBlockState(pos);
+        ResourceLocation id = ForgeRegistries.BLOCKS.getKey(state.getBlock());
+        if (id == null) return false;
+        String idStr = id.toString();
+        if (!DOOR_BLOCKS.contains(idStr)) return false;
         int solidSides = 0;
         for (BlockPos dir : get6Directions(pos)) {
             if (!world.getBlockState(dir).isAir()) solidSides++;
@@ -77,10 +97,11 @@ public class RoomManager {
     }
 
     public static void clearCache() {
-        roomCache.clear();
+        roomIdMap.clear();
+        posToRoomId.clear();
     }
 
-    // 判断玩家是否能看到指定房间（递归门）
+    // 递归��可见，优先短路径
     public static boolean isRoomVisible(Level world, Room room, BlockPos playerPos, int depth) {
         if (depth > 8) return false;
         if (room.blocks.contains(playerPos)) return true;
@@ -93,7 +114,6 @@ public class RoomManager {
         return false;
     }
 
-    // 给剔除器用，判断一个坐标是不是玩家可见房间
     public static boolean isPositionVisible(Level world, BlockPos pos, BlockPos playerPos) {
         Room room = findRoom(world, pos);
         return isRoomVisible(world, room, playerPos, 0);

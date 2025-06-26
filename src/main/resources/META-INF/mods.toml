@@ -1,72 +1,60 @@
-# 这是一个示例 mods.toml 文件，包含与加载 mod 相关的数据。
-# 有若干必填字段（#mandatory），还有许多可选字段（#optional）。
-# 整体格式为标准 TOML 格式，v0.5.0。
-# 注意本文件中有一些 TOML 列表。
-# TOML 格式详情见：https://github.com/toml-lang/toml
-# 要加载的 mod 加载器类型名称——普通 FML @Mod mod 应为 javafml
-modLoader="javafml" #必填
-# 匹配上述 mod 加载器的版本范围——普通 FML @Mod 为 forge 版本
-loaderVersion="[47,)" #必填，Forge 每个 Minecraft 版本通常会提升此值。详见 Forge 下载页面。
-# 你的 mod 许可证。此为必填元数据，有助于理解你的再分发属性。
-# 可选项见 https://choosealicense.com/。默认是 All rights reserved。
+modLoader="javafml" # 必填，使用 Forge 加载器
+loaderVersion="[47,)" # 必填，Forge 1.20.1 及以上
 license="MIT"
-# 出现问题时可供参考的 URL
-#issueTrackerURL="https://change.me.to.your.issue.tracker.example.invalid/" #可选
-# 如果你的 mod 仅为客户端且无多人功能（包括专用服务器或局域网），
-# 设置为 true，Forge 会为你设置正确的 displayTest 并跳过专用服务器加载。
-#clientSideOnly=true #可选，默认 false
-# mod 列表——允许数量由具体 mod 加载器决定
-[[mods]] #必填
-# mod 的 modid
-modId="enclosed_culling" #必填
-# mod 的版本号
-version="1.0.0" #必填
-# mod 的显示名称
-displayName="封闭空间渲染优化 EnclosedSpaceRenderCulling" #必填
-# mod 的主页 URL，会在 mod UI 中显示
-displayURL="https://github.com/dongge0210/Enclosed-Space-Render-Culling"
-# mod JAR 根目录下的 logo 文件名
-logoFile="logo.png"
-# mod UI 中显示的作者
-authors="dongge0210"
-# mod UI 中显示的文本字段
-#credits="" #可选
-# Display Test 控制你的 mod 在服务器连接界面的显示
-# MATCH_VERSION 表示客户端和服务器版本不一致时显示红 X。默认行为，适用于有客户端和服务器内容的 mod。
-# IGNORE_SERVER_VERSION 表示服务器有但客户端无时不显示红 X。适用于仅服务器 mod。
-# IGNORE_ALL_VERSION 表示客户端或服务器有时都不显示红 X。仅适用于无服务器内容的 mod。
-# NONE 表示不设置 display test。需自行处理，详见 IExtensionPoint.DisplayTest。可自定义方案。
-# 重要：这不是指定 mod 加载环境（客户端或专用服务器）的指令。mod 应在任何环境下加载（可什么都不做）。
-#displayTest="MATCH_VERSION" #如未指定，clientSideOnly=false 时默认 MATCH_VERSION，clientSideOnly=true 时默认 IGNORE_ALL_VERSION（可选）
+# 出现问题时的 issue 跟踪地址
+# issueTrackerURL="https://github.com/dongge0210/Enclosed-Space-Render-Culling/issues"
 
-# mod 的描述（多行！）（#必填）
-description='''
-优化封闭房间内的渲染，节省你的GPU性能！
+[[mods]] # 必填，mod 列表
+modId="enclosed_culling" # 必填，mod 唯一ID（小写、下划线）
+version="1.0.0" # 必填，mod 版本
+displayName="封闭空间渲染优化 EnclosedSpaceRenderCulling" # 必填，mod显示名
+displayURL="https://github.com/dongge0210/Enclosed-Space-Render-Culling"
+logoFile="logo.png"
+authors="dongge0210"
+# description 支持多行
+description = '''
+优化封闭房间内的渲染和方块实体tick，极大节省你的GPU与CPU性能！
 Enclosed space render culling for Minecraft 1.20.1 Forge.
+集成房间-门可见性、机械动力等mod的BlockEntity tick优化。
 '''
-# 依赖项——用 . 表示特定 modid 的依赖。依赖为可选。
-[[dependencies.enclosed_culling]] #可选
-    # 依赖的 modid
-    modId="forge" #必填
-    # 此依赖是否必须存在——如否，需指定下方顺序
-    mandatory=true #必填
-    # 依赖的版本范围
-    versionRange="[47,)" #必填
-    # 依赖的加载顺序关系——如非必需，需指定 BEFORE 或 AFTER
-    # BEFORE - 本 mod 在依赖之前加载
-    # AFTER - 本 mod 在依赖之后加载
+
+# MIXIN配置（声明mixin json，Forge自动加载，推荐加上）
+[[mixins]]
+config = "mixins.enclosedculling.json"
+
+# 依赖关系
+[[dependencies.enclosed_culling]]
+    modId="forge"
+    mandatory=true
+    versionRange="[47,)"
     ordering="NONE"
-    # 依赖应用的端——BOTH、CLIENT 或 SERVER
     side="BOTH"
+
 [[dependencies.enclosed_culling]]
     modId="minecraft"
     mandatory=true
-    # 此版本范围声明当前 minecraft 版本及以上，不包括下一个大版本
     versionRange="[1.20.1,1.21)"
     ordering="NONE"
     side="BOTH"
 
-# Features 是你可能需要声明的游戏环境特性。此例声明
-# 你的 mod 需要 GL 3.2 或更高版本。其他特性会陆续添加。它们区分端，因此声明不会阻止 mod 在服务器加载。
-#[features.enclosed_culling]
-#openGLVersion="[3.2,)"
+# 如需兼容机械动力等mod，可加如下声明（可选）
+[[dependencies.enclosed_culling]]
+    modId="create"
+    mandatory=false
+    versionRange="[0,)"
+    ordering="AFTER"
+    side="BOTH"
+
+# [[dependencies.enclosed_culling]]
+#     modId="mekanism"
+#     mandatory=false
+#     versionRange="[*]"
+#     ordering="AFTER"
+#     side="BOTH"
+
+# [[dependencies.enclosed_culling]]
+#     modId="thermal"
+#     mandatory=false
+#     versionRange="[*]"
+#     ordering="AFTER"
+#     side="BOTH"

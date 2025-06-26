@@ -84,6 +84,8 @@ minecraft {
         client {
             // 以逗号分隔的命名空间列表，指定加载哪些 gametest。空为全部命名空间。
             property 'forge.enabledGameTestNamespaces', mod_id
+            property 'mixin.env.remapRefMap', 'true'
+            property 'mixin.env.refMapRemappingFile', 'build/createSrgToMcp/output.srg'
         }
 
         server {
@@ -112,6 +114,9 @@ minecraft {
 sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 repositories {
+    //maven { url 'https://maven.aliyun.com/repository/public' }
+    //maven { url 'https://repo.huaweicloud.com/repository/maven/' }
+    mavenCentral()
     // 在此添加依赖仓库
     // ForgeGradle 会自动添加 Forge maven 和 Maven Central
 
@@ -122,6 +127,10 @@ repositories {
     // }
 }
 
+configurations {
+    modCompileOnly
+}
+
 dependencies {
     // 指定要使用的 Minecraft 版本。
     // 只要有 "userdev" 分类构件且为兼容补丁构件，任何构件都可用。
@@ -129,6 +138,8 @@ dependencies {
     // 若 group id 为 "net.minecraft" 且 artifact id 为 ["client", "server", "joined"] 之一，
     // 则会特殊处理，无需外部仓库即可设置 vanilla 依赖。
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+    implementation 'org.spongepowered:mixin:0.8.5'
+    implementation fg.deobf(files("libs/create-1.20.1-6.0.6.jar"))
 
     // JEI 示例 mod 依赖 - 使用 fg.deobf() 确保依赖被 remap 到你的开发映射
     // JEI API 仅编译时使用，完整 JEI 构件运行时使用

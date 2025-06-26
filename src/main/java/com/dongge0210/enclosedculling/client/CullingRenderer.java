@@ -7,41 +7,47 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.*;
 
 public class CullingRenderer {
-    private static final Map<BlockPos, Boolean> occlusionCache = new ConcurrentHashMap<>();
-    private static final int CACHE_SIZE = 1000;
+    private static final int CACHE_SIZE = 4096;
+    // LRU缓存
+    private static final LinkedHashMap<BlockPos, Boolean> occlusionCache = new LinkedHashMap<>(CACHE_SIZE, 0.75f, true) {
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<BlockPos, Boolean> eldest) {
+            return size() > CACHE_SIZE;
+        }
+    };
     private static final int CHECK_RADIUS = 3;
 
     public static boolean isPositionOccluded(Level world, BlockPos pos, Vec3 playerPos) {
-        // 房间-门系统剔除：玩家不可见房间直接不渲染
         if (!RoomManager.isPositionVisible(world, pos, BlockPos.containing(playerPos))) {
             cacheResult(pos, true);
             return true;
         }
 
-        if (occlusionCache.containsKey(pos)) {
-            return occlusionCache.get(pos);
-        }
+        Boolean cached = occlusionCache.get(pos);
+        if (cached != null) return cached;
+
         if (pos.distSqr(BlockPos.containing(playerPos)) < 16) {
             cacheResult(pos, false);
             return false;
         }
+        // 更精细的遮挡判定
         boolean isOccluded = checkEnclosure(world, pos) && !hasLineOfSight(world, pos, playerPos);
         cacheResult(pos, isOccluded);
         return isOccluded;
     }
 
+    // 检查是否被包围
     private static boolean checkEnclosure(Level world, BlockPos center) {
         BlockPos[] directions = {
-            center.above(CHECK_RADIUS),
-            center.below(CHECK_RADIUS),
-            center.north(CHECK_RADIUS),
-            center.south(CHECK_RADIUS),
-            center.east(CHECK_RADIUS),
-            center.west(CHECK_RADIUS)
+                center.above(CHECK_RADIUS),
+                center.below(CHECK_RADIUS),
+                center.north(CHECK_RADIUS),
+                center.south(CHECK_RADIUS),
+                center.east(CHECK_RADIUS),
+                center.west(CHECK_RADIUS)
         };
         int solidSides = 0;
         for (BlockPos checkPos : directions) {
@@ -52,16 +58,39 @@ public class CullingRenderer {
         return solidSides >= 5;
     }
 
+    // 高精度视线判定（Bresenham线段算法）
     private static boolean hasLineOfSight(Level world, BlockPos target, Vec3 playerPos) {
-        Vec3 targetPos = Vec3.atCenterOf(target);
-        Vec3 direction = targetPos.subtract(playerPos).normalize();
-        double distance = playerPos.distanceTo(targetPos);
-        int steps = (int) Math.min(distance, 20);
-        for (int i = 1; i < steps; i++) {
-            Vec3 checkPos = playerPos.add(direction.scale(i));
-            BlockPos blockPos = BlockPos.containing(checkPos);
-            if (isSolidBlock(world, blockPos)) {
-                return false;
+        BlockPos playerBlock = BlockPos.containing(playerPos);
+        int x1 = playerBlock.getX(), y1 = playerBlock.getY(), z1 = playerBlock.getZ();
+        int x2 = target.getX(), y2 = target.getY(), z2 = target.getZ();
+        int dx = Math.abs(x2 - x1);
+        int dy = Math.abs(y2 - y1);
+        int dz = Math.abs(z2 - z1);
+        int xs = x1 < x2 ? 1 : -1;
+        int ys = y1 < y2 ? 1 : -1;
+        int zs = z1 < z2 ? 1 : -1;
+
+        int n = 1 + dx + dy + dz;
+        int x = x1, y = y1, z = z1;
+        int err_1 = dx - dy, err_2 = dx - dz;
+
+        for (int i = 0; i < n; ++i) {
+            if (isSolidBlock(world, new BlockPos(x, y, z))) return false;
+            if (2 * err_1 > -dy) {
+                err_1 -= dy;
+                x += xs;
+            }
+            if (2 * err_2 > -dz) {
+                err_2 -= dz;
+                x += xs;
+            }
+            if (2 * err_1 < dx) {
+                err_1 += dx;
+                y += ys;
+            }
+            if (2 * err_2 < dx) {
+                err_2 += dx;
+                z += zs;
             }
         }
         return true;
@@ -73,15 +102,10 @@ public class CullingRenderer {
     }
 
     private static void cacheResult(BlockPos pos, boolean result) {
-        if (occlusionCache.size() > CACHE_SIZE) {
-            occlusionCache.clear();
-        }
         occlusionCache.put(pos.immutable(), result);
     }
 
     public static void cleanCache() {
-        if (Minecraft.getInstance().level != null) {
-            occlusionCache.clear();
-        }
+        occlusionCache.clear();
     }
 }
