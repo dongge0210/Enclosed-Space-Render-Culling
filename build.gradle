@@ -17,16 +17,16 @@ java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
 println "Java: ${System.getProperty 'java.version'}, JVM: ${System.getProperty 'java.vm.version'} (${System.getProperty 'java.vendor'}), Arch: ${System.getProperty 'os.arch'}"
 minecraft {
-    // 映射可以随时更改，格式如下：
+    // 映射可以随时更改，格式如下:
     // 通道:    版本:
     // official   MCVersion             Mojang 映射文件中的官方字段/方法名
     // parchment  YYYY.MM.DD-MCVersion  基于官方映射的社区参数名和 javadoc
     //
     // 使用 'official' 或 'parchment' 映射时，必须了解 Mojang 的许可协议。
-    // 更多信息请见：https://github.com/MinecraftForge/MCPConfig/blob/master/Mojang.md
+    // 更多信息请见:https://github.com/MinecraftForge/MCPConfig/blob/master/Mojang.md
     //
     // Parchment 是由 ParchmentMC 维护的非官方项目，与 MinecraftForge 独立
-    // 使用其映射需额外设置：https://parchmentmc.org/docs/getting-started
+    // 使用其映射需额外设置:https://parchmentmc.org/docs/getting-started
     //
     // 使用非默认映射需自担风险，可能并不总是可用。
     // 更改映射后只需重新运行 setup 任务即可更新工作区。
@@ -39,7 +39,7 @@ minecraft {
 
     // 此属性允许配置 Gradle 的 ProcessResources 任务在 IDE 输出目录运行，启动游戏前执行。
     // 本模板必须设置为 true。
-    // 详见：https://docs.gradle.org/current/dsl/org.gradle.language.jvm.tasks.ProcessResources.html
+    // 详见:https://docs.gradle.org/current/dsl/org.gradle.language.jvm.tasks.ProcessResources.html
     copyIdeResources = true
 
     // 若为 true，将所有声明的运行配置的文件夹名添加到生成的 IDE 运行配置中。
@@ -52,7 +52,7 @@ minecraft {
     // 访问转换器文件可在项目任意位置。
     // 但最终 mod jar 中必须位于 "META-INF/accesstransformer.cfg"，Forge 才能加载。
     // 默认位置是最佳实践，可自动放到最终 jar 的正确位置。
-    // 更多信息见：https://docs.minecraftforge.net/en/latest/advanced/accesstransformers/
+    // 更多信息见:https://docs.minecraftforge.net/en/latest/advanced/accesstransformers/
     // accessTransformer = file('src/main/resources/META-INF/accesstransformer.cfg')
 
     // 默认运行配置。
@@ -71,7 +71,7 @@ minecraft {
 
             // 推荐的控制台日志级别
             // 可设置不同级别。
-            // 详见：https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels
+            // 详见:https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels
             property 'forge.logging.console.level', 'debug'
 
             mods {
@@ -101,7 +101,7 @@ minecraft {
         }
 
         data {
-            // 示例：覆盖上方 configureEach 设置的 workingDirectory
+            // 示例:覆盖上方 configureEach 设置的 workingDirectory
             workingDirectory project.file('run-data')
 
             // 指定数据生成的 modid、输出资源位置和现有资源查找路径。
@@ -121,7 +121,7 @@ repositories {
     // ForgeGradle 会自动添加 Forge maven 和 Maven Central
 
     // 若有 mod jar 依赖在 ./libs，可如下声明仓库。
-    // 详见：https://docs.gradle.org/current/userguide/declaring_repositories.html#sub:flat_dir_resolver
+    // 详见:https://docs.gradle.org/current/userguide/declaring_repositories.html#sub:flat_dir_resolver
     // flatDir {
     //     dir 'libs'
     // }
@@ -138,7 +138,8 @@ dependencies {
     // 若 group id 为 "net.minecraft" 且 artifact id 为 ["client", "server", "joined"] 之一，
     // 则会特殊处理，无需外部仓库即可设置 vanilla 依赖。
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
-    implementation 'org.spongepowered:mixin:0.8.5'
+    implementation 'org.spongepowered:mixin:${mixin_version}'
+    // 临时注释掉 Create 依赖来测试模组基础功能
     implementation fg.deobf(files("libs/create-1.20.1-6.0.6.jar"))
 
     // JEI 示例 mod 依赖 - 使用 fg.deobf() 确保依赖被 remap 到你的开发映射
@@ -147,12 +148,12 @@ dependencies {
     // compileOnly fg.deobf("mezz.jei:jei-${mc_version}-forge-api:${jei_version}")
     // runtimeOnly fg.deobf("mezz.jei:jei-${mc_version}-forge:${jei_version}")
 
-    // 示例：使用 ./libs 下 mod jar 的依赖
+    // 示例:使用 ./libs 下 mod jar 的依赖
     // 映射到 ./libs/coolmod-${mc_version}-${coolmod_version}.jar
     // 搜索时忽略 group id，此处为 "blank"
     // implementation fg.deobf("blank:coolmod-${mc_version}:${coolmod_version}")
 
-    // 更多信息：
+    // 更多信息:
     // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
     // http://www.gradle.org/docs/current/userguide/dependency_management.html
 }
@@ -160,7 +161,7 @@ dependencies {
 // 此代码块会在指定资源目标中展开所有声明的替换属性。
 // 缺失属性会导致错误。属性使用 ${} Groovy 语法展开。
 // 启用 "copyIdeResources" 时，IDE 环境下启动游戏前也会运行。
-// 详见：https://docs.gradle.org/current/dsl/org.gradle.language.jvm.tasks.ProcessResources.html
+// 详见:https://docs.gradle.org/current/dsl/org.gradle.language.jvm.tasks.ProcessResources.html
 tasks.named('processResources', ProcessResources).configure {
     var replaceProperties = [
             minecraft_version: minecraft_version, minecraft_version_range: minecraft_version_range,
@@ -176,7 +177,7 @@ tasks.named('processResources', ProcessResources).configure {
     }
 }
 
-// 示例：如何将属性写入 manifest 以便运行时读取。
+// 示例:如何将属性写入 manifest 以便运行时读取。
 tasks.named('jar', Jar).configure {
     manifest {
         attributes([
@@ -194,7 +195,7 @@ tasks.named('jar', Jar).configure {
     finalizedBy 'reobfJar'
 }
 
-// 若为多项目构建，开发时需未混淆 jar，可在发布时再混淆：
+// 若为多项目构建，开发时需未混淆 jar，可在发布时再混淆:
 // tasks.named('publish').configure {
 //     dependsOn 'reobfJar'
 // }

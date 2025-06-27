@@ -4,8 +4,10 @@
   "package": "com.dongge0210.enclosedculling.mixin",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
-  "BlockEntityTickerMixin",
-  "SmartBlockEntityMixin"
+    "BlockEntityTickerMixin",
+    "SmartBlockEntityMixin",
+    "LevelRendererMixin",
+    "LevelRendererBlockRenderMixin"
   ],
   "client": [],
   "injectors": {

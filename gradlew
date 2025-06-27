@@ -5,7 +5,7 @@
 #
 # 根据 Apache License, Version 2.0（“许可证”）授权；
 # 除非遵守许可证，否则您不得使用此文件。
-# 您可以在以下地址获取许可证副本：
+# 您可以在以下地址获取许可证副本:
 #
 #      https://www.apache.org/licenses/LICENSE-2.0
 #
@@ -18,22 +18,22 @@
 #
 #   由 Gradle 生成的 POSIX 启动脚本。
 #
-#   运行须知：
+#   运行须知:
 #
 #   (1) 需要 POSIX 兼容的 shell 来运行此脚本。如果您的 /bin/sh
 #       不兼容，但有其他兼容 shell（如 ksh 或 bash），则运行此脚本时，
-#       在命令行前加上 shell 名称，例如：
+#       在命令行前加上 shell 名称，例如:
 #
 #           ksh Gradle
 #
-#       Busybox 及类似的精简 shell 不可用，因为本脚本需要以下 POSIX shell 特性：
+#       Busybox 及类似的精简 shell 不可用，因为本脚本需要以下 POSIX shell 特性:
 #         * 函数；
 #         * 扩展 «$var», «${var}», «${var:-default}», «${var+SET}»,
 #           «${var#prefix}», «${var%suffix}», 以及 «$( cmd )»；
 #         * 具有可测试退出状态的复合命令，尤其是 «case»；
 #         * 各种内建命令，包括 «command», «set», 和 «ulimit»。
 #
-#   补丁须知：
+#   补丁须知:
 #
 #   (2) 本脚本面向所有 POSIX shell，因此避免使用 Bash、Ksh 等扩展；
 #       特别是避免使用数组。
@@ -52,13 +52,13 @@
 #       https://github.com/gradle/gradle/blob/HEAD/subprojects/plugins/src/main/resources/org/gradle/api/internal/plugins/unixStartScript.txt
 #       在 Gradle 项目中生成。
 #
-#       Gradle 项目地址：https://github.com/gradle/gradle/
+#       Gradle 项目地址:https://github.com/gradle/gradle/
 #
 ##############################################################################
 
 # 尝试设置 APP_HOME
 
-# 解析链接：$0 可能是一个链接
+# 解析链接:$0 可能是一个链接
 app_path=$0
 
 # 需要此步骤以处理链式符号链接。
@@ -117,13 +117,13 @@ if [ -n "$JAVA_HOME" ] ; then
         JAVACMD=$JAVA_HOME/bin/java
     fi
     if [ ! -x "$JAVACMD" ] ; then
-        die "错误：JAVA_HOME 设置为无效目录：$JAVA_HOME
+        die "错误:JAVA_HOME 设置为无效目录:$JAVA_HOME
 
 请在环境变量中设置 JAVA_HOME，指向您的 Java 安装路径。"
     fi
 else
     JAVACMD=java
-    which java >/dev/null 2>&1 || die "错误：JAVA_HOME 未设置且 PATH 中找不到 'java' 命令。
+    which java >/dev/null 2>&1 || die "错误:JAVA_HOME 未设置且 PATH 中找不到 'java' 命令。
 
 请在环境变量中设置 JAVA_HOME，指向您的 Java 安装路径。"
 fi
@@ -147,7 +147,7 @@ if ! "$cygwin" && ! "$darwin" && ! "$nonstop" ; then
     esac
 fi
 
-# 收集所有 java 命令参数，逆序堆叠：
+# 收集所有 java 命令参数，逆序堆叠:
 #   * 命令行参数
 #   * 主类名
 #   * -classpath
@@ -177,7 +177,7 @@ if "$cygwin" || "$msys" ; then
         # 将参数列表循环与参数数目相同的次数，
         # 这样每个参数都回到原位，但可能已被修改。
         #
-        # 注意：`for` 循环在开始前捕获其迭代列表，
+        # 注意:`for` 循环在开始前捕获其迭代列表，
         # 所以这里改变位置参数不会影响迭代次数或 arg 的值。
         shift                   # 移除旧参数
         set -- "$@" "$arg"      # 添加替换参数
@@ -208,7 +208,7 @@ fi
 #
 # -n1 使其每行输出一个参数，去除引号和反斜杠。
 #
-# 在 Bash 中可直接：
+# 在 Bash 中可直接:
 #
 #   readarray ARGS < <( xargs -n1 <<<"$var" ) &&
 #   set -- "${ARGS[@]}" "$@"
