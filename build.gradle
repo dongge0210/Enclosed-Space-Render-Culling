@@ -58,7 +58,7 @@ minecraft {
     // 默认运行配置。
     // 可根据需要调整、移除或复制。
     runs {
-        // 适用于下方所有运行配置
+        // 适用于下方所有？行配置
         configureEach {
             workingDirectory project.file('run')
 
@@ -84,8 +84,6 @@ minecraft {
         client {
             // 以逗号分隔的命名空间列表，指定加载哪些 gametest。空为全部命名空间。
             property 'forge.enabledGameTestNamespaces', mod_id
-            property 'mixin.env.remapRefMap', 'true'
-            property 'mixin.env.refMapRemappingFile', 'build/createSrgToMcp/output.srg'
         }
 
         server {
@@ -115,16 +113,20 @@ sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 repositories {
     //maven { url 'https://maven.aliyun.com/repository/public' }
-    //maven { url 'https://repo.huaweicloud.com/repository/maven/' }
+    //maven { url 'https://modmaven.dev/' }
     mavenCentral()
+    maven { url = "https://maven.createmod.net" } // Create, Ponder, Flywheel
+    maven { url = "https://maven.tterrag.com/" } // Registrate（官方仓库）
+    // maven { url = "https://maven.ithundxr.dev/mirror" } // Registrate（已失效）
+    maven { url = "https://raw.githubusercontent.com/Fuzss/modresources/main/maven/" } // ForgeConfigAPIPort
     // 在此添加依赖仓库
     // ForgeGradle 会自动添加 Forge maven 和 Maven Central
 
     // 若有 mod jar 依赖在 ./libs，可如下声明仓库。
     // 详见:https://docs.gradle.org/current/userguide/declaring_repositories.html#sub:flat_dir_resolver
-    // flatDir {
-    //     dir 'libs'
-    // }
+    flatDir {
+        dirs 'libs'
+    }
 }
 
 configurations {
@@ -132,30 +134,19 @@ configurations {
 }
 
 dependencies {
-    // 指定要使用的 Minecraft 版本。
-    // 只要有 "userdev" 分类构件且为兼容补丁构件，任何构件都可用。
-    // ForgeGradle 会请求并设置 "userdev" 分类。
-    // 若 group id 为 "net.minecraft" 且 artifact id 为 ["client", "server", "joined"] 之一，
-    // 则会特殊处理，无需外部仓库即可设置 vanilla 依赖。
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
-    implementation 'org.spongepowered:mixin:${mixin_version}'
-    // 临时注释掉 Create 依赖来测试模组基础功能
-    implementation fg.deobf(files("libs/create-1.20.1-6.0.6.jar"))
 
-    // JEI 示例 mod 依赖 - 使用 fg.deobf() 确保依赖被 remap 到你的开发映射
-    // JEI API 仅编译时使用，完整 JEI 构件运行时使用
-    // compileOnly fg.deobf("mezz.jei:jei-${mc_version}-common-api:${jei_version}")
-    // compileOnly fg.deobf("mezz.jei:jei-${mc_version}-forge-api:${jei_version}")
-    // runtimeOnly fg.deobf("mezz.jei:jei-${mc_version}-forge:${jei_version}")
+    // Create作为API依赖
+    implementation(fg.deobf("com.simibubi.create:create-${minecraft_version}:${create_version}:slim") { transitive = false })
 
-    // 示例:使用 ./libs 下 mod jar 的依赖
-    // 映射到 ./libs/coolmod-${mc_version}-${coolmod_version}.jar
-    // 搜索时忽略 group id，此处为 "blank"
-    // implementation fg.deobf("blank:coolmod-${mc_version}:${coolmod_version}")
+    // Flywheel依赖
+    implementation fg.deobf("dev.engine-room.flywheel:flywheel-forge-${minecraft_version}:${flywheel_version}")
 
-    // 更多信息:
-    // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
-    // http://www.gradle.org/docs/current/userguide/dependency_management.html
+    // Ponder依赖
+    implementation fg.deobf("net.createmod.ponder:Ponder-Forge-${minecraft_version}:${ponder_version}")
+
+    // Registrate依赖
+    implementation fg.deobf("com.tterrag.registrate:Registrate:${registrate_version}")
 }
 
 // 此代码块会在指定资源目标中展开所有声明的替换属性。
@@ -195,7 +186,7 @@ tasks.named('jar', Jar).configure {
     finalizedBy 'reobfJar'
 }
 
-// 若为多项目构建，开发时需未混淆 jar，可在发布时再混淆:
+// 若为多项目构建，开发时需未混淆 jar，可在发布时再��淆:
 // tasks.named('publish').configure {
 //     dependsOn 'reobfJar'
 // }
@@ -213,6 +204,7 @@ publishing {
         }
     }
 }
+
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8' // Java 编译使用 UTF-8 字符集

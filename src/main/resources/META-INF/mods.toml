@@ -18,10 +18,6 @@ Enclosed space render culling for Minecraft 1.20.1 Forge.
 集成房间-门可见性、机械动力等mod的BlockEntity tick优化。
 '''
 
-# MIXIN配置（声明mixin json，Forge自动加载，推荐加上）
-[[mixins]]
-config = "mixins.enclosedculling.json"
-
 # 依赖关系
 [[dependencies.enclosed_culling]]
     modId="forge"
@@ -37,11 +33,11 @@ config = "mixins.enclosedculling.json"
     ordering="NONE"
     side="BOTH"
 
-# 如需兼容机械动力等mod，可加如下声明（可选）
+# Create改为必需依赖
 [[dependencies.enclosed_culling]]
     modId="create"
-    mandatory=false
-    versionRange="[0,)"
+    mandatory=true
+    versionRange="[6.0.6,6.1.0)"
     ordering="AFTER"
     side="BOTH"
 
