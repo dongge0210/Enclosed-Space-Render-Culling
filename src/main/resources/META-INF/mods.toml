@@ -33,13 +33,22 @@ Enclosed space render culling for Minecraft 1.20.1 Forge.
     ordering="NONE"
     side="BOTH"
 
-# Create改为必需依赖
+# Create改为本地版本依赖
 [[dependencies.enclosed_culling]]
     modId="create"
     mandatory=true
     versionRange="[6.0.6,6.1.0)"
     ordering="AFTER"
     side="BOTH"
+
+# 如果本地 Create 不包含 Flywheel，保留此依赖
+# 否则注释掉
+# [[dependencies.enclosed_culling]]
+#     modId="flywheel"
+#     mandatory=true
+#     versionRange="[1.0.4,1.1.0)"
+#     ordering="AFTER"
+#     side="BOTH"
 
 # [[dependencies.enclosed_culling]]
 #     modId="mekanism"

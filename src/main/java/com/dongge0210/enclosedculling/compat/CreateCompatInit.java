@@ -1,33 +1,40 @@
 package com.dongge0210.enclosedculling.compat;
 
-import com.dongge0210.enclosedculling.EnclosedSpaceRenderCulling;
 import net.minecraftforge.fml.ModList;
+import com.dongge0210.enclosedculling.EnclosedSpaceRenderCulling;
 
 public class CreateCompatInit {
-    private static final String CREATE_MODID = "create";
-
-    public static void registerCompat() {
-        if (isCreateLoaded()) {
-            EnclosedSpaceRenderCulling.LOGGER.info("检测到 Create Mod，正在注册兼容内容...");
-            try {
-                registerCreateCompat();
-                EnclosedSpaceRenderCulling.LOGGER.info("Create 兼容内容注册完成。");
-            } catch (Exception e) {
-                EnclosedSpaceRenderCulling.LOGGER.error("Create 兼容内容注册失败！", e);
-            }
-        } else {
-            EnclosedSpaceRenderCulling.LOGGER.info("未检测到 Create Mod，无需进行兼容处理。");
+    
+    private static boolean createLoaded = false;
+    
+    public static void init() {
+        createLoaded = ModList.get().isLoaded("create");
+        if (createLoaded) {
+            EnclosedSpaceRenderCulling.LOGGER.info("Create mod detected, enabling compatibility features");
+            initCreateCompat();
         }
     }
-
-    private static boolean isCreateLoaded() {
-        return ModList.get().isLoaded(CREATE_MODID);
+    
+    private static void initCreateCompat() {
+        // Create 兼容性初始化
+        // 由于 Create API 变化，使用事件系统进行集成
+        EnclosedSpaceRenderCulling.LOGGER.debug("Initializing Create compatibility");
     }
-
-    // 这里写和Create mod相关的兼容注册逻辑
-    private static void registerCreateCompat() {
-        // TODO: 在这里扩展你的具体兼容逻辑
-        // 例如注册culling handler、重定向渲染、监听Create的事件等
-        EnclosedSpaceRenderCulling.LOGGER.info("Create兼容逻辑已调用（请在这里实现具体功能）。");
+    
+    public static boolean isCreateLoaded() {
+        return createLoaded;
+    }
+    
+    /**
+     * 检查指定位置的 Create 方块实体是否应该被优化
+     */
+    public static boolean shouldOptimizeCreateBlockEntity(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos) {
+        if (!createLoaded) {
+            return false;
+        }
+        
+        // 这里可以添加具体的优化逻辑
+        // 例如检查是否在封闭空间中且不可见
+        return false; // 暂时返回 false，避免影响正常功能
     }
 }

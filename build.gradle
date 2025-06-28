@@ -112,18 +112,12 @@ minecraft {
 sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 repositories {
-    //maven { url 'https://maven.aliyun.com/repository/public' }
-    //maven { url 'https://modmaven.dev/' }
     mavenCentral()
-    maven { url = "https://maven.createmod.net" } // Create, Ponder, Flywheel
-    maven { url = "https://maven.tterrag.com/" } // Registrate（官方仓库）
-    // maven { url = "https://maven.ithundxr.dev/mirror" } // Registrate（已失效）
-    maven { url = "https://raw.githubusercontent.com/Fuzss/modresources/main/maven/" } // ForgeConfigAPIPort
-    // 在此添加依赖仓库
-    // ForgeGradle 会自动添加 Forge maven 和 Maven Central
+    // 保留 Flywheel 仓库（如果需要）
+    maven { url = "https://maven.createmod.net" } // 仅用于 Flywheel
+    maven { url = "https://maven.tterrag.com/" } // Registrate
 
-    // 若有 mod jar 依赖在 ./libs，可如下声明仓库。
-    // 详见:https://docs.gradle.org/current/userguide/declaring_repositories.html#sub:flat_dir_resolver
+    // 本地 libs 目录
     flatDir {
         dirs 'libs'
     }
@@ -136,14 +130,11 @@ configurations {
 dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
 
-    // Create作为API依赖
-    implementation(fg.deobf("com.simibubi.create:create-${minecraft_version}:${create_version}:slim") { transitive = false })
+    // 使用本地 Create jar 文件
+    implementation files('libs/create-1.20.1-6.0.6.jar')
 
-    // Flywheel依赖
-    implementation fg.deobf("dev.engine-room.flywheel:flywheel-forge-${minecraft_version}:${flywheel_version}")
-
-    // Ponder依赖
-    implementation fg.deobf("net.createmod.ponder:Ponder-Forge-${minecraft_version}:${ponder_version}")
+    // Flywheel 依赖（如果 Create 包含则可注释掉）
+    // implementation fg.deobf("dev.engine-room.flywheel:flywheel-forge-${minecraft_version}:${flywheel_version}")
 
     // Registrate依赖
     implementation fg.deobf("com.tterrag.registrate:Registrate:${registrate_version}")
