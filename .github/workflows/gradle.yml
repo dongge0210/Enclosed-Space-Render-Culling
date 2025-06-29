@@ -20,7 +20,7 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    # 缓存Gradle依赖，加速构建
+    # 缓存Gradle依赖,加速构建
     - name: 缓存Gradle依赖
       uses: actions/cache@v4
       with:
@@ -29,7 +29,7 @@ jobs:
           ~/.gradle/wrapper
         key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
 
-    # ForgeGradle证书校验关掉，防止国内构建抽风...这似乎没必要
+    # ForgeGradle证书校验关掉,防止国内构建抽风...这似乎没必要
     - name: 关闭ForgeGradle证书校验
       run: echo "ORG_GRADLE_PROJECT_net_forgegradle_gradle_check_certs=false" >> $GITHUB_ENV
 

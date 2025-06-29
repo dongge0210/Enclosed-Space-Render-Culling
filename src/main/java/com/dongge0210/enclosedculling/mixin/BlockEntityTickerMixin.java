@@ -9,7 +9,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-// 以机械动力等mod的BlockEntity为目标，可以按需扩展target
+// 以机械动力等mod的BlockEntity为目标,可以按需扩展target
 @Mixin(BlockEntity.class)
 public class BlockEntityTickerMixin {
     @Inject(method = "tick", at = @At("HEAD"), cancellable = true)
@@ -19,7 +19,7 @@ public class BlockEntityTickerMixin {
         String id = self.getType().toString();
         if (!id.contains("create") && !id.contains("mekanism") && !id.contains("thermal")) return;
 
-        // 判断是否在玩家可见房间，不可见直接跳过tick
+        // 判断是否在玩家可见房间,不可见直接跳过tick
         if (!RoomManager.isPositionVisible(level, pos, level.getNearestPlayer(pos.getX(), pos.getY(), pos.getZ(), 128, false).blockPosition())) {
             ci.cancel();
         }

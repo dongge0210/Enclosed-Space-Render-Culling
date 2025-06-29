@@ -14,7 +14,7 @@ public class SpaceConnectivityAnalyzer {
         this.maxStep = maxStep;
     }
 
-    // 泛洪填充，标记所有可见空间
+    // 泛洪填充,标记所有可见空间
     public void floodFrom(BlockPos start) {
         visibleSpaces.clear();
         Queue<BlockPos> queue = new ArrayDeque<>();

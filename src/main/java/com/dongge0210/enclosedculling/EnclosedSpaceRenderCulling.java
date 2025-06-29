@@ -33,7 +33,7 @@ public class EnclosedSpaceRenderCulling {
     }
 
     private void clientSetup(final FMLClientSetupEvent event) {
-        LOGGER.info("EnclosedSpaceRenderCulling clientSetup 被调用，注册兼容逻辑！");
+        LOGGER.info("EnclosedSpaceRenderCulling clientSetup 被调用,注册兼容逻辑！");
         event.enqueueWork(() -> {
             SpaceCullingManager.register();
         });

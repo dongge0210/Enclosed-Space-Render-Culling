@@ -12,46 +12,46 @@ base {
     archivesName = mod_id
 }
 
-// Mojang 在 1.18+ 向终端用户分发 Java 17，因此你的 mod 应该以 Java 17 为目标。
+// Mojang 在 1.18+ 向终端用户分发 Java 17,因此你的 mod 应该以 Java 17 为目标。
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
 println "Java: ${System.getProperty 'java.version'}, JVM: ${System.getProperty 'java.vm.version'} (${System.getProperty 'java.vendor'}), Arch: ${System.getProperty 'os.arch'}"
 minecraft {
-    // 映射可以随时更改，格式如下:
+    // 映射可以随时更改,格式如下:
     // 通道:    版本:
     // official   MCVersion             Mojang 映射文件中的官方字段/方法名
     // parchment  YYYY.MM.DD-MCVersion  基于官方映射的社区参数名和 javadoc
     //
-    // 使用 'official' 或 'parchment' 映射时，必须了解 Mojang 的许可协议。
+    // 使用 'official' 或 'parchment' 映射时,必须了解 Mojang 的许可协议。
     // 更多信息请见:https://github.com/MinecraftForge/MCPConfig/blob/master/Mojang.md
     //
-    // Parchment 是由 ParchmentMC 维护的非官方项目，与 MinecraftForge 独立
+    // Parchment 是由 ParchmentMC 维护的非官方项目,与 MinecraftForge 独立
     // 使用其映射需额外设置:https://parchmentmc.org/docs/getting-started
     //
-    // 使用非默认映射需自担风险，可能并不总是可用。
+    // 使用非默认映射需自担风险,可能并不总是可用。
     // 更改映射后只需重新运行 setup 任务即可更新工作区。
     mappings channel: mapping_channel, version: mapping_version
 
-    // 若为 true，所有 Eclipse/IntelliJ IDEA 运行配置在启动游戏前会运行对应的 "prepareX" 任务。
+    // 若为 true,所有 Eclipse/IntelliJ IDEA 运行配置在启动游戏前会运行对应的 "prepareX" 任务。
     // 大多数情况下无需启用。
     // enableEclipsePrepareRuns = true
     // enableIdeaPrepareRuns = true
 
-    // 此属性允许配置 Gradle 的 ProcessResources 任务在 IDE 输出目录运行，启动游戏前执行。
+    // 此属性允许配置 Gradle 的 ProcessResources 任务在 IDE 输出目录运行,启动游戏前执行。
     // 本模板必须设置为 true。
     // 详见:https://docs.gradle.org/current/dsl/org.gradle.language.jvm.tasks.ProcessResources.html
     copyIdeResources = true
 
-    // 若为 true，将所有声明的运行配置的文件夹名添加到生成的 IDE 运行配置中。
+    // 若为 true,将所有声明的运行配置的文件夹名添加到生成的 IDE 运行配置中。
     // 文件夹名可通过 "folderName" 属性设置。
-    // 默认情况下，运行配置的文件夹名为包含它的 Gradle 项目名。
+    // 默认情况下,运行配置的文件夹名为包含它的 Gradle 项目名。
     // generateRunFolders = true
 
     // 此属性启用开发环境下的访问转换器。
     // 会应用到 Minecraft 构件。
     // 访问转换器文件可在项目任意位置。
-    // 但最终 mod jar 中必须位于 "META-INF/accesstransformer.cfg"，Forge 才能加载。
-    // 默认位置是最佳实践，可自动放到最终 jar 的正确位置。
+    // 但最终 mod jar 中必须位于 "META-INF/accesstransformer.cfg",Forge 才能加载。
+    // 默认位置是最佳实践,可自动放到最终 jar 的正确位置。
     // 更多信息见:https://docs.minecraftforge.net/en/latest/advanced/accesstransformers/
     // accessTransformer = file('src/main/resources/META-INF/accesstransformer.cfg')
 
@@ -63,7 +63,7 @@ minecraft {
             workingDirectory project.file('run')
 
             // 推荐的 userdev 环境日志标记
-            // 可根据需要添加/移除标记，用逗号分隔。
+            // 可根据需要添加/移除标记,用逗号分隔。
             // "SCAN": 用于 mod 扫描。
             // "REGISTRIES": 用于注册事件。
             // "REGISTRYDUMP": 用于获取所有注册表内容。
@@ -82,20 +82,32 @@ minecraft {
         }
 
         client {
-            // 以逗号分隔的命名空间列表，指定加载哪些 gametest。空为全部命名空间。
+            // 以逗号分隔的命名空间列表,指定加载哪些 gametest。空为全部命名空间。
             property 'forge.enabledGameTestNamespaces', mod_id
+            
+            // Mixin refmap remapping 配置
+            property 'mixin.env.remapRefMap', 'true'
+            property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
         }
 
         server {
             property 'forge.enabledGameTestNamespaces', mod_id
             args '--nogui'
+            
+            // Mixin refmap remapping 配置
+            property 'mixin.env.remapRefMap', 'true'
+            property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
         }
 
-        // 此运行配置启动 GameTestServer 并运行所有已注册的 gametest，然后退出。
-        // 默认情况下，若未提供 gametest，服务器会崩溃。
-        // gametest 系统对其他运行配置也默认启用，可通过 /test 命令访问。
+        // 此运行配置启动 GameTestServer 并运行所有已注册的 gametest,然后退出。
+        // 默认情况下,若未提供 gametest,服务器会崩溃。
+        // gametest 系统对其他运行配置也默认启用,可通过 /test 命令访问。
         gameTestServer {
             property 'forge.enabledGameTestNamespaces', mod_id
+            
+            // Mixin refmap remapping 配置
+            property 'mixin.env.remapRefMap', 'true'
+            property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
         }
 
         data {
@@ -113,36 +125,30 @@ sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 repositories {
     mavenCentral()
-    // 保留 Flywheel 仓库（如果需要）
-    maven { url = "https://maven.createmod.net" } // 仅用于 Flywheel
+    // Create Maven 仓库
+    maven { url = "https://maven.createmod.net" } // Create, Ponder, Flywheel
     maven { url = "https://maven.tterrag.com/" } // Registrate
-
-    // 本地 libs 目录
-    flatDir {
-        dirs 'libs'
-    }
 }
 
-configurations {
-    modCompileOnly
-}
 
 dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
 
-    // 使用本地 Create jar 文件
-    implementation files('libs/create-1.20.1-6.0.6.jar')
-
-    // Flywheel 依赖（如果 Create 包含则可注释掉）
-    // implementation fg.deobf("dev.engine-room.flywheel:flywheel-forge-${minecraft_version}:${flywheel_version}")
-
-    // Registrate依赖
-    implementation fg.deobf("com.tterrag.registrate:Registrate:${registrate_version}")
+    // Create 及其依赖项 - 使用 Maven 仓库
+    implementation(fg.deobf("com.simibubi.create:create-${minecraft_version}:${create_version}:slim") { transitive = false })
+    implementation(fg.deobf("net.createmod.ponder:Ponder-Forge-${minecraft_version}:${ponder_version}"))
+    compileOnly(fg.deobf("dev.engine-room.flywheel:flywheel-forge-api-${minecraft_version}:${flywheel_version}"))
+    runtimeOnly(fg.deobf("dev.engine-room.flywheel:flywheel-forge-${minecraft_version}:${flywheel_version}"))
+    implementation(fg.deobf("com.tterrag.registrate:Registrate:${registrate_version}"))
+    
+    // Mixin 扩展
+    compileOnly(annotationProcessor("io.github.llamalad7:mixinextras-common:0.4.1"))
+    implementation("io.github.llamalad7:mixinextras-forge:0.4.1")
 }
 
 // 此代码块会在指定资源目标中展开所有声明的替换属性。
 // 缺失属性会导致错误。属性使用 ${} Groovy 语法展开。
-// 启用 "copyIdeResources" 时，IDE 环境下启动游戏前也会运行。
+// 启用 "copyIdeResources" 时,IDE 环境下启动游戏前也会运行。
 // 详见:https://docs.gradle.org/current/dsl/org.gradle.language.jvm.tasks.ProcessResources.html
 tasks.named('processResources', ProcessResources).configure {
     var replaceProperties = [
@@ -177,12 +183,12 @@ tasks.named('jar', Jar).configure {
     finalizedBy 'reobfJar'
 }
 
-// 若为多项目构建，开发时需未混淆 jar，可在发布时再��淆:
+// 若为多项目构建,开发时需未混淆 jar,可在发布时再��淆:
 // tasks.named('publish').configure {
 //     dependsOn 'reobfJar'
 // }
 
-// 示例配置，允许使用 maven-publish 插件发布
+// 示例配置,允许使用 maven-publish 插件发布
 publishing {
     publications {
         register('mavenJava', MavenPublication) {

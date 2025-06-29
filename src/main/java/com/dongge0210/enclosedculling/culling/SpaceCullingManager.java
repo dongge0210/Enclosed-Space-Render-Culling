@@ -49,6 +49,6 @@ public class SpaceCullingManager {
                 entity.setInvisible(false);
             }
         }
-        // 方块剔除需要事件或Mixin配合（如需直接跳过渲染，告诉我）
+        // 方块剔除需要事件或Mixin配合（如需直接跳过渲染,告诉我）
     }
 }

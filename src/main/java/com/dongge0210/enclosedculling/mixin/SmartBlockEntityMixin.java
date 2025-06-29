@@ -13,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class SmartBlockEntityMixin {
     @Inject(method = "tick", at = @At("HEAD"), cancellable = true)
     private void onSmartTick(Level level, BlockPos pos, CallbackInfo ci) {
-        // 判断是否在玩家可见空间，不可见则跳过tick
+        // 判断是否在玩家可见空间,不可见则跳过tick
         if (!RoomManager.isPositionVisible(
                 level,
                 pos,

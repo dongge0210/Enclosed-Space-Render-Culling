@@ -1,19 +1,19 @@
-modLoader="javafml" # 必填，使用 Forge 加载器
-loaderVersion="[47,)" # 必填，Forge 1.20.1 及以上
+modLoader="javafml" # 必填,使用 Forge 加载器
+loaderVersion="[47,)" # 必填,Forge 1.20.1 及以上
 license="MIT"
 # 出现问题时的 issue 跟踪地址
 # issueTrackerURL="https://github.com/dongge0210/Enclosed-Space-Render-Culling/issues"
 
-[[mods]] # 必填，mod 列表
-modId="enclosed_culling" # 必填，mod 唯一ID（小写、下划线）
-version="1.0.0" # 必填，mod 版本
-displayName="封闭空间渲染优化 EnclosedSpaceRenderCulling" # 必填，mod显示名
+[[mods]] # 必填,mod 列表
+modId= mod_id # 必填,mod 唯一ID（小写、下划线）
+version= mod_version # 必填,mod 版本
+displayName="封闭空间渲染优化 EnclosedSpaceRenderCulling" # 必填,mod显示名
 displayURL="https://github.com/dongge0210/Enclosed-Space-Render-Culling"
 logoFile="logo.png"
 authors="dongge0210"
 # description 支持多行
 description = '''
-优化封闭房间内的渲染和方块实体tick，极大节省你的GPU与CPU性能！
+优化封闭房间内的渲染和方块实体tick,极大节省你的GPU与CPU性能！
 Enclosed space render culling for Minecraft 1.20.1 Forge.
 集成房间-门可见性、机械动力等mod的BlockEntity tick优化。
 '''
@@ -33,7 +33,7 @@ Enclosed space render culling for Minecraft 1.20.1 Forge.
     ordering="NONE"
     side="BOTH"
 
-# Create改为本地版本依赖
+# Create 依赖配置
 [[dependencies.enclosed_culling]]
     modId="create"
     mandatory=true
@@ -41,7 +41,7 @@ Enclosed space render culling for Minecraft 1.20.1 Forge.
     ordering="AFTER"
     side="BOTH"
 
-# 如果本地 Create 不包含 Flywheel，保留此依赖
+# 如果本地 Create 不包含 Flywheel,保留此依赖
 # 否则注释掉
 # [[dependencies.enclosed_culling]]
 #     modId="flywheel"

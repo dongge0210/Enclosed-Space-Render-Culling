@@ -1,13 +1,22 @@
 package com.dongge0210.enclosedculling.room;
 
+import java.util.ArrayDeque;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Queue;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.registries.ForgeRegistries;
-
-import java.util.*;
-import java.util.concurrent.*;
 
 public class RoomManager {
     private static final int MAX_ROOM_SIZE = 2048; // 支持更大空间
@@ -19,12 +28,12 @@ public class RoomManager {
     private static final Map<BlockPos, Integer> posToRoomId = new ConcurrentHashMap<>();
     private static final ExecutorService roomThreadPool = Executors.newFixedThreadPool(2);
 
-    // 提供异步接口，提升大空间首次遍历速度
+    // 提供异步接口,提升大空间首次遍历速度
     public static Future<Room> findRoomAsync(Level world, BlockPos start) {
         return roomThreadPool.submit(() -> findRoom(world, start));
     }
 
-    // 推荐用异步，老接口同步
+    // 推荐用异步,老接口同步
     public static Room findRoom(Level world, BlockPos start) {
         Integer cachedId = posToRoomId.get(start);
         if (cachedId != null) {
@@ -101,7 +110,7 @@ public class RoomManager {
         posToRoomId.clear();
     }
 
-    // 递归��可见，优先短路径
+    // 递归��可见,优先短路径
     public static boolean isRoomVisible(Level world, Room room, BlockPos playerPos, int depth) {
         if (depth > 8) return false;
         if (room.blocks.contains(playerPos)) return true;
