@@ -1,0 +1,279 @@
+name: 自动发布 | Auto Release
+
+on:
+  # 每周一次 (每周一 UTC 00:00) - 自动发布weekly版本
+  schedule:
+    - cron: '0 0 * * 1'
+  
+  # 手动触发 - 支持选择不同发布类型
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: '发布类型 | Release Type'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+        - dev
+        - beta
+        - release
+      cleanup_old:
+        description: '清理旧版本 | Cleanup Old Releases'
+        required: true
+        default: 'true'
+        type: choice
+        options:
+        - 'true'
+        - 'false'
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+
+    steps:
+    - name: 检出代码 | Checkout Code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # 获取完整历史以便生成版本号
+
+    - name: 设置JDK 17 | Setup JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    # 缓存Gradle依赖
+    - name: 缓存Gradle依赖 | Cache Gradle Dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+
+    - name: 构建Mod | Build Minecraft Mod
+      run: ./gradlew build --no-daemon --parallel
+
+    # 生成版本号和标签
+    - name: 生成版本信息 | Generate Version Info
+      id: version
+      run: |
+        # 获取当前日期和时间
+        DATE=$(date +%Y%m%d)
+        TIME=$(date +%H%M)
+        
+        # 获取短commit hash
+        COMMIT_HASH=$(git rev-parse --short HEAD)
+        
+        # 从gradle.properties获取mod版本
+        MOD_VERSION=$(grep 'mod_version=' gradle.properties | cut -d'=' -f2)
+        
+        # 根据触发类型确定发布类型
+        if [ "${{ github.event_name }}" == "schedule" ]; then
+          RELEASE_TYPE="weekly"
+          VERSION_TAG="v${MOD_VERSION}-weekly-${DATE}"
+          RELEASE_NAME="🗓️ 每周自动构建 | Weekly Build ${DATE}"
+          IS_PRERELEASE="true"
+        elif [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+          RELEASE_TYPE="${{ github.event.inputs.release_type }}"
+          if [ "$RELEASE_TYPE" == "release" ]; then
+            VERSION_TAG="v${MOD_VERSION}"
+            RELEASE_NAME="🚀 正式版本 | Release v${MOD_VERSION}"
+            IS_PRERELEASE="false"
+          elif [ "$RELEASE_TYPE" == "beta" ]; then
+            VERSION_TAG="v${MOD_VERSION}-beta-${DATE}"
+            RELEASE_NAME="🧪 测试版本 | Beta v${MOD_VERSION}-${DATE}"
+            IS_PRERELEASE="true"
+          else
+            VERSION_TAG="v${MOD_VERSION}-dev-${DATE}-${TIME}"
+            RELEASE_NAME="🔧 开发版本 | Dev Build ${DATE}-${TIME}"
+            IS_PRERELEASE="true"
+          fi
+        else
+          RELEASE_TYPE="dev"
+          VERSION_TAG="v${MOD_VERSION}-dev-${DATE}-${TIME}-${COMMIT_HASH}"
+          RELEASE_NAME="🔧 开发版本 | Dev Build ${DATE}-${TIME}"
+          IS_PRERELEASE="true"
+        fi
+        
+        echo "version_tag=${VERSION_TAG}" >> $GITHUB_OUTPUT
+        echo "release_name=${RELEASE_NAME}" >> $GITHUB_OUTPUT
+        echo "is_prerelease=${IS_PRERELEASE}" >> $GITHUB_OUTPUT
+        echo "mod_version=${MOD_VERSION}" >> $GITHUB_OUTPUT
+        echo "commit_hash=${COMMIT_HASH}" >> $GITHUB_OUTPUT
+        echo "release_type=${RELEASE_TYPE}" >> $GITHUB_OUTPUT
+
+    # 检查是否有jar文件生成
+    - name: 验证构建产物 | Verify Build Artifacts
+      run: |
+        if [ ! -d "build/libs" ] || [ -z "$(ls -A build/libs/*.jar 2>/dev/null)" ]; then
+          echo "❌ 没有找到构建的jar文件 | No jar files found!"
+          exit 1
+        fi
+        echo "✅ 找到以下jar文件 | Found jar files:"
+        ls -la build/libs/*.jar
+
+    # 生成发布说明
+    - name: 生成发布说明 | Generate Release Notes
+      id: release_notes
+      run: |
+        # 确定清理状态
+        CLEANUP_STATUS="false"
+        if [ "${{ github.event_name }}" != "workflow_dispatch" ] || [ "${{ github.event.inputs.cleanup_old }}" == "true" ]; then
+          CLEANUP_STATUS="true"
+        fi
+        
+        cat > release_notes.md << EOF
+        ## 📦 版本信息 | Version Information
+        
+        - **Mod版本 | Mod Version**: \`${{ steps.version.outputs.mod_version }}\`
+        - **发布类型 | Release Type**: \`${{ steps.version.outputs.release_type }}\`
+        - **提交哈希 | Commit Hash**: \`${{ steps.version.outputs.commit_hash }}\`
+        - **构建时间 | Build Time**: \`$(date -u +"%Y-%m-%d %H:%M:%S UTC")\`
+        - **旧版本清理 | Old Versions Cleanup**: \`${CLEANUP_STATUS}\`
+        
+        ## 🎮 兼容性信息 | Compatibility Information
+        
+        - **Minecraft版本 | Minecraft Version**: \`$(grep 'minecraft_version=' gradle.properties | cut -d'=' -f2)\`
+        - **Forge版本 | Forge Version**: \`$(grep 'forge_version=' gradle.properties | cut -d'=' -f2)\`
+        - **Create版本 | Create Version**: \`$(grep 'create_version=' gradle.properties | cut -d'=' -f2)\`
+        
+        ## 📋 构建文件 | Build Files
+        
+        \`\`\`
+        $(ls -la build/libs/)
+        \`\`\`
+        
+        ## 📝 最近更改 | Recent Changes
+        
+        $(git log --oneline -10)
+        
+        ---
+        
+        > **注意 | Note**: 
+        > - 这是一个自动生成的版本 | This is an automatically generated release
+        > - 如果启用了清理功能，同类型的旧版本已被删除 | If cleanup is enabled, old releases of the same type have been deleted
+        > - 如果是开发版或测试版，请谨慎在生产环境中使用 | If it's a dev or beta version, please use with caution in production
+        EOF
+
+    # 删除之前的同类型release (更激进的清理策略)
+    - name: 清理旧版本 | Cleanup Old Releases
+      # 只在以下情况执行清理：
+      # 1. 自动触发(push/schedule)时总是清理
+      # 2. 手动触发且用户选择清理时
+      if: |
+        github.event_name != 'workflow_dispatch' || 
+        (github.event_name == 'workflow_dispatch' && github.event.inputs.cleanup_old == 'true')
+      continue-on-error: true
+      run: |
+        echo "🗑️ 开始清理旧版本 | Starting cleanup of old releases..."
+        echo "🔧 清理策略 | Cleanup strategy: 删除所有同类型旧版本 | Delete all old releases of same type"
+        
+        # 获取所有releases
+        RELEASES=$(gh release list --limit 100 || echo "")
+        
+        if [ "${{ steps.version.outputs.release_type }}" == "dev" ]; then
+          # 删除所有旧的dev版本
+          echo "🔍 搜索并删除所有旧的dev版本 | Searching and deleting all old dev releases..."
+          echo "$RELEASES" | grep "dev" | while read release_line; do
+            TAG=$(echo "$release_line" | awk '{print $1}')
+            if [ "$TAG" != "${{ steps.version.outputs.version_tag }}" ]; then
+              echo "🗑️ 删除dev版本 | Deleting dev release: $TAG"
+              gh release delete "$TAG" --yes || true
+              # 删除对应的git tag
+              git push --delete origin "$TAG" 2>/dev/null || true
+            fi
+          done
+          
+        elif [ "${{ steps.version.outputs.release_type }}" == "weekly" ]; then
+          # 删除所有旧的weekly版本
+          echo "🔍 搜索并删除所有旧的weekly版本 | Searching and deleting all old weekly releases..."
+          echo "$RELEASES" | grep "weekly" | while read release_line; do
+            TAG=$(echo "$release_line" | awk '{print $1}')
+            if [ "$TAG" != "${{ steps.version.outputs.version_tag }}" ]; then
+              echo "🗑️ 删除weekly版本 | Deleting weekly release: $TAG"
+              gh release delete "$TAG" --yes || true
+              # 删除对应的git tag
+              git push --delete origin "$TAG" 2>/dev/null || true
+            fi
+          done
+          
+        elif [ "${{ steps.version.outputs.release_type }}" == "beta" ]; then
+          # 删除所有旧的beta版本
+          echo "🔍 搜索并删除所有旧的beta版本 | Searching and deleting all old beta releases..."
+          echo "$RELEASES" | grep "beta" | while read release_line; do
+            TAG=$(echo "$release_line" | awk '{print $1}')
+            if [ "$TAG" != "${{ steps.version.outputs.version_tag }}" ]; then
+              echo "🗑️ 删除beta版本 | Deleting beta release: $TAG"
+              gh release delete "$TAG" --yes || true
+              # 删除对应的git tag
+              git push --delete origin "$TAG" 2>/dev/null || true
+            fi
+          done
+          
+        elif [ "${{ steps.version.outputs.release_type }}" == "release" ]; then
+          # 对于正式版本，只删除同版本号的预发布版本
+          MOD_VERSION="${{ steps.version.outputs.mod_version }}"
+          echo "🔍 删除同版本号的预发布版本 | Deleting pre-releases of same version: $MOD_VERSION"
+          echo "$RELEASES" | grep -E "${MOD_VERSION}-(dev|beta|weekly)" | while read release_line; do
+            TAG=$(echo "$release_line" | awk '{print $1}')
+            echo "🗑️ 删除预发布版本 | Deleting pre-release: $TAG"
+            gh release delete "$TAG" --yes || true
+            # 删除对应的git tag
+            git push --delete origin "$TAG" 2>/dev/null || true
+          done
+        fi
+        
+        echo "✅ 旧版本清理完成 | Old releases cleanup completed"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    # 检查并删除已存在的同名tag
+    - name: 清理同名标签 | Cleanup Existing Tags
+      continue-on-error: true
+      run: |
+        TAG="${{ steps.version.outputs.version_tag }}"
+        
+        # 检查tag是否存在
+        if git rev-parse --verify "refs/tags/$TAG" >/dev/null 2>&1; then
+          echo "🏷️ 发现已存在的标签，正在删除 | Found existing tag, deleting: $TAG"
+          
+          # 先尝试删除远程release
+          gh release delete "$TAG" --yes || true
+          
+          # 删除远程tag
+          git push --delete origin "$TAG" || true
+          
+          # 删除本地tag
+          git tag -d "$TAG" || true
+          
+          echo "✅ 标签清理完成 | Tag cleanup completed"
+        else
+          echo "ℹ️ 未发现同名标签 | No existing tag found: $TAG"
+        fi
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    # 创建或更新Release
+    - name: 创建/更新Release | Create/Update Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ steps.version.outputs.version_tag }}
+        name: ${{ steps.version.outputs.release_name }}
+        body_path: release_notes.md
+        files: build/libs/*.jar
+        prerelease: ${{ steps.version.outputs.is_prerelease }}
+        make_latest: ${{ steps.version.outputs.is_prerelease == 'false' }}
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    # 输出成功信息
+    - name: 发布完成 | Release Complete
+      run: |
+        echo "🎉 发布成功! | Release successful!"
+        echo "📦 版本标签 | Version Tag: ${{ steps.version.outputs.version_tag }}"
+        echo "🔗 Release链接 | Release URL: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ steps.version.outputs.version_tag }}"

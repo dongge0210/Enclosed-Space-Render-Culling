@@ -9,6 +9,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write  # 需要此权限来触发其他workflow
 
     steps:
     - name: 检出代码
@@ -46,9 +49,9 @@ jobs:
     # 生成项目目录树 | Generate Project Directory Tree
     - name: 生成项目目录树 | Generate Project Directory Tree
       run: |
-        echo "## 📁 项目目录结构 | Project Directory Structure" > directory-tree.md
+        echo "## 项目目录结构 | Project Directory Structure" > directory-tree.md
         echo "" >> directory-tree.md
-        echo "🕒 生成时间 | Generated at: $(date)" >> directory-tree.md
+        echo "生成时间 | Generated at: $(date)" >> directory-tree.md
         echo "" >> directory-tree.md
         echo '```' >> directory-tree.md
         if command -v tree &> /dev/null; then
@@ -75,6 +78,39 @@ jobs:
       with:
         name: project-directory-tree
         path: directory-tree.md
+
+    # 自动发布dev版本 | Auto Release Dev Version (仅在main分支push时)
+    - name: 自动发布dev版本 | Auto Release Dev Version
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        echo "构建成功，正在自动发布dev版本... | Build successful, auto releasing dev version..."
+        echo "构建的文件 | Built files:"
+        ls -la build/libs/
+        echo ""
+        echo "触发自动发布流程 | Triggering auto release workflow..."
+        
+        # 检查是否有可发布的jar文件
+        if [ ! -f build/libs/*.jar ]; then
+          echo "未找到jar文件，跳过发布 | No jar files found, skipping release"
+          exit 0
+        fi
+        
+        # 使用GitHub CLI触发release工作流，指定dev发布类型
+        if gh workflow run release.yml \
+          --field release_type=dev \
+          --field cleanup_old=true; then
+          echo "自动发布流程已触发成功 | Auto release workflow triggered successfully"
+          echo "发布类型: dev | Release type: dev"
+          echo "将清理旧版本 | Will cleanup old releases"
+          echo "发布流程将在后台运行，请查看Actions页面获取详细信息 | Release workflow will run in background, check Actions page for details"
+          echo "Actions页面: https://github.com/${{ github.repository }}/actions"
+        else
+          echo "触发发布流程失败 | Failed to trigger release workflow"
+          echo "请手动检查GitHub Actions权限设置 | Please manually check GitHub Actions permissions"
+          # 不退出失败，因为构建本身是成功的
+        fi
 
   dependency-submission:
     runs-on: ubuntu-latest
