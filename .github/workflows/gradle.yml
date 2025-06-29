@@ -30,8 +30,8 @@ jobs:
         key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
 
     # ForgeGradle证书校验关掉,防止国内构建抽风...这似乎没必要
-    - name: 关闭ForgeGradle证书校验
-      run: echo "ORG_GRADLE_PROJECT_net_forgegradle_gradle_check_certs=false" >> $GITHUB_ENV
+    #- name: 关闭ForgeGradle证书校验
+    #  run: echo "ORG_GRADLE_PROJECT_net_forgegradle_gradle_check_certs=false" >> $GITHUB_ENV
 
     - name: 构建Mod
       run: ./gradlew build --no-daemon -info --max-workers=12 --parallel
@@ -42,10 +42,40 @@ jobs:
         name: mod-jar
         path: build/libs/*.jar
 
+    # 生成项目目录树
+    - name: 生成项目目录树
+      run: |
+        echo "## 📁 项目目录结构" > directory-tree.md
+        echo "" >> directory-tree.md
+        echo "生成时间: $(date)" >> directory-tree.md
+        echo "" >> directory-tree.md
+        echo '```' >> directory-tree.md
+        if command -v tree &> /dev/null; then
+          tree -a -I '.git|.gradle|build|run|.idea|*.iml|*.ipr|*.iws|logs|mods|*.log' --dirsfirst
+        else
+          find . -type f -not -path './.git/*' -not -path './.gradle/*' -not -path './build/*' -not -path './run/*' -not -path './.idea/*' | sort
+        fi >> directory-tree.md
+        echo '```' >> directory-tree.md
+        echo "" >> directory-tree.md
+        echo "## 📋 构建信息" >> directory-tree.md
+        echo "- Minecraft版本: $(grep 'minecraft_version=' gradle.properties | cut -d'=' -f2)" >> directory-tree.md
+        echo "- Forge版本: $(grep 'forge_version=' gradle.properties | cut -d'=' -f2)" >> directory-tree.md
+        echo "- Create版本: $(grep 'create_version=' gradle.properties | cut -d'=' -f2)" >> directory-tree.md
+        echo "- Mod版本: $(grep 'mod_version=' gradle.properties | cut -d'=' -f2)" >> directory-tree.md
+        cat directory-tree.md
+
+    - name: 上传目录树
+      uses: actions/upload-artifact@v4
+      with:
+        name: directory-tree
+        path: directory-tree.md
+
   dependency-submission:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
+      actions: read
+      security-events: write
 
     steps:
     - uses: actions/checkout@v4
@@ -55,5 +85,7 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
+    # 注意：需要在GitHub仓库设置中启用Dependency Graph功能
     - name: 生成并提交依赖图
       uses: gradle/actions/dependency-submission@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4.0.0
+      continue-on-error: true # 如果依赖图未启用则跳过，不影响构建

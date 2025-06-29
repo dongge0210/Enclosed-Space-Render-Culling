@@ -15,11 +15,12 @@ public class SmartBlockEntityMixin {
     private void onSmartTick(Level level, BlockPos pos, CallbackInfo ci) {
         // 判断是否在玩家可见空间,不可见则跳过tick
         if (!RoomManager.isPositionVisible(
-                level,
-                pos,
-                level.getNearestPlayer(pos.getX(), pos.getY(), pos.getZ(), 128, false).blockPosition()
-        )) {
-            ci.cancel();
-        }
+            level,
+            pos,
+            level.getNearestPlayer(pos.getX(), pos.getY(), pos.getZ(), 128, false) != null ? 
+            level.getNearestPlayer(pos.getX(), pos.getY(), pos.getZ(), 128, false).blockPosition() : null
+    )) {
+        ci.cancel();
     }
+
 }
