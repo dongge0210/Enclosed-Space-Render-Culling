@@ -114,9 +114,11 @@ jobs:
 
   dependency-submission:
     runs-on: ubuntu-latest
-    # 确保权限正确配置
+    # 只在push时运行，避免PR时的权限问题
+    if: github.event_name == 'push'
+    # 确保权限正确配置 - 依赖图提交需要contents:write权限
     permissions:
-      contents: read
+      contents: write  # 依赖图提交必需的权限
       actions: read
       security-events: write
       # 添加依赖图提交所需权限
@@ -132,6 +134,7 @@ jobs:
 
     # 注意:需要在GitHub仓库设置中启用Dependency Graph功能
     # Note: Dependency Graph feature must be enabled in GitHub repository settings
+    # 依赖图提交只在push时运行，PR时跳过以避免权限问题
     - name: 生成并提交依赖图 | Generate and Submit Dependency Graph
       uses: gradle/actions/dependency-submission@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4.0.0
       continue-on-error: true # 如果依赖图未启用则跳过,不影响构建 | Skip if dependency graph is not enabled
