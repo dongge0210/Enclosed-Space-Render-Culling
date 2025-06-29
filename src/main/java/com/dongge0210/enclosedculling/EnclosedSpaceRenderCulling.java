@@ -37,13 +37,26 @@ public class EnclosedSpaceRenderCulling {
         LOGGER.info("EnclosedSpaceRenderCulling clientSetup 被调用,注册兼容逻辑！");
         event.enqueueWork(() -> {
             SpaceCullingManager.register();
+            
+            // 初始化调试系统（仅客户端）
+            com.dongge0210.enclosedculling.debug.DebugManager.resetStats();
+            LOGGER.info("Debug system initialized for client");
         });
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
         LOGGER.info("EnclosedSpaceRenderCulling commonSetup 被调用！");
         event.enqueueWork(() -> {
-            // 在这里可以添加通用设置逻辑
+            // 初始化热重载系统
+            com.dongge0210.enclosedculling.hotswap.HotReloadManager.initialize();
+            
+            // 初始化脚本管理器
+            com.dongge0210.enclosedculling.hotswap.ScriptManager.initialize();
+            
+            // 创建示例脚本文件
+            com.dongge0210.enclosedculling.hotswap.HotReloadManager.createExampleScripts();
+            
+            LOGGER.info("Development and hot-reload systems initialized");
         });
     }
 }
