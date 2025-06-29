@@ -16,7 +16,7 @@ public class RoomManager {
     private static final Map<Integer, Set<Integer>> groupIdToRoomIds = new HashMap<>();
     // 玩家属于哪个连通群（可见区域）
     private static final Map<UUID, Integer> playerGroupCache = new HashMap<>();
-    // 反查，哪个连通群有哪些玩家
+    // 反查,哪个连通群有哪些玩家
     private static final Map<Integer, Set<UUID>> groupIdToPlayers = new HashMap<>();
 
     // --- 区块缓存（区块为单位缓存可见性） ---
@@ -29,7 +29,7 @@ public class RoomManager {
 
     // --- 房间判定与可见性主入口 ---
     /**
-     * 玩家每次移动时调用，更新玩家所在房间和连通群
+     * 玩家每次移动时调用,更新玩家所在房间和连通群
      */
     public static void updatePlayerRoom(Level level, UUID playerId, BlockPos playerPos) {
         int roomId = findOrCreateRoom(level, playerPos);
@@ -60,7 +60,7 @@ public class RoomManager {
             return cached;
         }
 
-        // 需要重新判定：带视线算法
+        // 需要重新判定:带视线算法
         boolean visible = hasLineOfSight(level, playerPos, target);
         chunkCache.put(playerId, visible);
         chunkCacheTick.put(chunkKey, nowTick);
@@ -68,11 +68,11 @@ public class RoomManager {
     }
 
     /**
-     * 重载方法：简化版可见性判断（无UUID参数）
-     * 直接使用视线算法，不进行房间分组检查
+     * 重载方法:简化版可见性判断（无UUID参数）
+     * 直接使用视线算法,不进行房间分组检查
      */
     public static boolean isPositionVisible(Level level, BlockPos target, BlockPos playerPos) {
-        // 简化版本，直接进行视线检查
+        // 简化版本,直接进行视线检查
         return hasLineOfSight(level, playerPos, target);
     }
 
@@ -84,7 +84,7 @@ public class RoomManager {
         if (posToRoomID.containsKey(pos)) {
             return posToRoomID.get(pos);
         }
-        // flood fill找到所有连通方块，分配roomId
+        // flood fill找到所有连通方块,分配roomId
         int roomId = Objects.hash(pos.getX(), pos.getY(), pos.getZ(), System.nanoTime());
         Set<BlockPos> roomBlocks = new HashSet<>();
         Queue<BlockPos> queue = new ArrayDeque<>();
@@ -148,7 +148,7 @@ public class RoomManager {
      */
     private static boolean isRoomTransparent(BlockState state) {
         return state.isAir() || !state.canOcclude();
-        // 你可以加更多白名单，比如玻璃、门、trapdoor等
+        // 你可以加更多白名单,比如玻璃、门、trapdoor等
     }
 
     /**
@@ -164,7 +164,7 @@ public class RoomManager {
 
     // --- 视线判定相关 ---
     /**
-     * 视线判定，from到to，中间有不透明方块就不可见
+     * 视线判定,from到to,中间有不透明方块就不可见
      */
     public static boolean hasLineOfSight(Level level, BlockPos from, BlockPos to) {
         for (BlockPos pos : bresenham3D(from, to)) {

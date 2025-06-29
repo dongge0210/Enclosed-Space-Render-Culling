@@ -21,7 +21,7 @@ public class BlockEntityTickerMixin {
 
         // 判断是否在玩家可见房间,不可见直接跳过tick
         var nearestPlayer = level.getNearestPlayer(pos.getX(), pos.getY(), pos.getZ(), 128, false);
-        if (nearestPlayer == null) return; // 如果没有附近的玩家，跳过优化
+        if (nearestPlayer == null) return; // 如果没有附近的玩家,跳过优化
         
         if (!RoomManager.isPositionVisible(level, pos, nearestPlayer.blockPosition())) {
             ci.cancel();

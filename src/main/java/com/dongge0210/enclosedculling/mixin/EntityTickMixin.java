@@ -18,9 +18,9 @@ public class EntityTickMixin {
         Level level = self.level();
         if (level.isClientSide) return; // 只在服务端优化tick
         
-        // 获取最近的玩家，并检查是否为null
+        // 获取最近的玩家,并检查是否为null
         var nearestPlayer = level.getNearestPlayer(self, 128);
-        if (nearestPlayer == null) return; // 如果没有附近的玩家，跳过优化
+        if (nearestPlayer == null) return; // 如果没有附近的玩家,跳过优化
         
         // 这里可以加白名单,比如只针对怪物,或者排除玩家
         if (!RoomManager.isPositionVisible(level, self.blockPosition(), nearestPlayer.blockPosition())) {

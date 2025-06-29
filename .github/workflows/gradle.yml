@@ -33,21 +33,22 @@ jobs:
     #- name: 关闭ForgeGradle证书校验
     #  run: echo "ORG_GRADLE_PROJECT_net_forgegradle_gradle_check_certs=false" >> $GITHUB_ENV
 
-    - name: 构建Mod
+    - name: 构建Mod | Build Minecraft Mod
       run: ./gradlew build --no-daemon -info --max-workers=12 --parallel
 
-    - name: 上传jar产物
+    - name: 上传构建产物 | Upload Build Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: mod-jar
+        name: minecraft-mod-jar
         path: build/libs/*.jar
+        if-no-files-found: error
 
-    # 生成项目目录树
-    - name: 生成项目目录树
+    # 生成项目目录树 | Generate Project Directory Tree
+    - name: 生成项目目录树 | Generate Project Directory Tree
       run: |
-        echo "## 📁 项目目录结构" > directory-tree.md
+        echo "## 📁 项目目录结构 | Project Directory Structure" > directory-tree.md
         echo "" >> directory-tree.md
-        echo "生成时间: $(date)" >> directory-tree.md
+        echo "🕒 生成时间 | Generated at: $(date)" >> directory-tree.md
         echo "" >> directory-tree.md
         echo '```' >> directory-tree.md
         if command -v tree &> /dev/null; then
@@ -57,35 +58,44 @@ jobs:
         fi >> directory-tree.md
         echo '```' >> directory-tree.md
         echo "" >> directory-tree.md
-        echo "## 📋 构建信息" >> directory-tree.md
-        echo "- Minecraft版本: $(grep 'minecraft_version=' gradle.properties | cut -d'=' -f2)" >> directory-tree.md
-        echo "- Forge版本: $(grep 'forge_version=' gradle.properties | cut -d'=' -f2)" >> directory-tree.md
-        echo "- Create版本: $(grep 'create_version=' gradle.properties | cut -d'=' -f2)" >> directory-tree.md
-        echo "- Mod版本: $(grep 'mod_version=' gradle.properties | cut -d'=' -f2)" >> directory-tree.md
+        echo "## 构建信息 | Build Information" >> directory-tree.md
+        echo "- Minecraft版本 | Minecraft Version: $(grep 'minecraft_version=' gradle.properties | cut -d'=' -f2)" >> directory-tree.md
+        echo "- Forge版本 | Forge Version: $(grep 'forge_version=' gradle.properties | cut -d'=' -f2)" >> directory-tree.md
+        echo "- Create版本 | Create Version: $(grep 'create_version=' gradle.properties | cut -d'=' -f2)" >> directory-tree.md
+        echo "- Mod版本 | Mod Version: $(grep 'mod_version=' gradle.properties | cut -d'=' -f2)" >> directory-tree.md
+        echo "" >> directory-tree.md
+        echo "## 构建文件 | Build Files" >> directory-tree.md
+        echo '```' >> directory-tree.md
+        ls -la build/libs/ || echo "No build files found"
+        echo '```' >> directory-tree.md
         cat directory-tree.md
 
-    - name: 上传目录树
+    - name: 上传目录树 | Upload Directory Tree
       uses: actions/upload-artifact@v4
       with:
-        name: directory-tree
+        name: project-directory-tree
         path: directory-tree.md
 
   dependency-submission:
     runs-on: ubuntu-latest
+    # 确保权限正确配置
     permissions:
       contents: read
       actions: read
       security-events: write
+      # 添加依赖图提交所需权限
+      pull-requests: read
 
     steps:
     - uses: actions/checkout@v4
-    - name: 设置JDK 17
+    - name: 设置JDK 17 | Setup JDK 17
       uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'temurin'
 
-    # 注意：需要在GitHub仓库设置中启用Dependency Graph功能
-    - name: 生成并提交依赖图
+    # 注意:需要在GitHub仓库设置中启用Dependency Graph功能
+    # Note: Dependency Graph feature must be enabled in GitHub repository settings
+    - name: 生成并提交依赖图 | Generate and Submit Dependency Graph
       uses: gradle/actions/dependency-submission@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4.0.0
-      continue-on-error: true # 如果依赖图未启用则跳过，不影响构建
+      continue-on-error: true # 如果依赖图未启用则跳过,不影响构建 | Skip if dependency graph is not enabled
