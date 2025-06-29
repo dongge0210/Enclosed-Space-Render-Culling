@@ -9,18 +9,24 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import java.util.UUID;
+
 @Mixin(SmartBlockEntity.class)
 public class SmartBlockEntityMixin {
     @Inject(method = "tick", at = @At("HEAD"), cancellable = true)
     private void onSmartTick(Level level, BlockPos pos, CallbackInfo ci) {
-        // 判断是否在玩家可见空间,不可见则跳过tick
+        // 获取最近玩家
+        var player = level.getNearestPlayer(pos.getX(), pos.getY(), pos.getZ(), 128, false);
+        if (player == null) return; // 没玩家直接不剔除
+        UUID playerId = player.getUUID();
+        // 判断是否在玩家可见空间，不可见则跳过tick
         if (!RoomManager.isPositionVisible(
-            level,
-            pos,
-            level.getNearestPlayer(pos.getX(), pos.getY(), pos.getZ(), 128, false) != null ? 
-            level.getNearestPlayer(pos.getX(), pos.getY(), pos.getZ(), 128, false).blockPosition() : null
-    )) {
-        ci.cancel();
+                level,
+                pos,
+                player.blockPosition(),
+                playerId
+        )) {
+            ci.cancel();
+        }
     }
-
 }

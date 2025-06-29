@@ -18,6 +18,7 @@ public class EnclosedSpaceRenderCulling {
     public static final String MODID = "enclosed_culling";
     public static final Logger LOGGER = LogManager.getLogger();
 
+    @SuppressWarnings("deprecation") // 暂时使用已弃用的API，直到找到替代方案
     public EnclosedSpaceRenderCulling() {
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
         

@@ -41,12 +41,14 @@ public class SpaceCullingManager {
         }
 
         // 剔除不可见空间的实体
-        for (Entity entity : world.getEntities(null, mc.player.getBoundingBox().inflate(CULL_RANGE))) {
-            BlockPos pos = entity.blockPosition();
-            if (!analyzer.isVisible(pos)) {
-                entity.setInvisible(true); // 强制不可见
-            } else {
-                entity.setInvisible(false);
+        if (analyzer != null && mc.player != null) {
+            for (Entity entity : world.getEntities(null, mc.player.getBoundingBox().inflate(CULL_RANGE))) {
+                BlockPos pos = entity.blockPosition();
+                if (!analyzer.isVisible(pos)) {
+                    entity.setInvisible(true); // 强制不可见
+                } else {
+                    entity.setInvisible(false);
+                }
             }
         }
         // 方块剔除需要事件或Mixin配合（如需直接跳过渲染,告诉我）
