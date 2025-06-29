@@ -16,6 +16,7 @@ out
 # gradle
 build
 .gradle
+FINAL_BUILD_SUMMARY.md
 
 # other
 eclipse

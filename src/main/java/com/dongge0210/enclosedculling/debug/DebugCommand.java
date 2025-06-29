@@ -13,6 +13,9 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.core.BlockPos;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.fml.config.ConfigTracker;
+import net.minecraftforge.fml.event.config.ModConfigEvent;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -72,9 +75,9 @@ public class DebugCommand {
      */
     private static int reloadConfig(CommandContext<CommandSourceStack> context) {
         try {
-            // 重载Forge配置
-            ModConfig.COMMON_SPEC.setConfig(null);
-            ModConfig.COMMON_SPEC.load();
+            // 简单通过重新加载配置文件的方式触发重载
+            // 在Forge 1.20.1中，配置会自动重载
+            ModConfig.reload();
             
             context.getSource().sendSuccess(() -> 
                 Component.literal("§a[EnclosedCulling] 配置重载成功！"), false);

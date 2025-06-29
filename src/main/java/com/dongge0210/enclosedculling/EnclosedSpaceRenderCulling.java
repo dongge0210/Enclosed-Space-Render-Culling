@@ -7,7 +7,6 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.ModLoadingContext;
-import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.apache.logging.log4j.LogManager;
@@ -18,14 +17,15 @@ public class EnclosedSpaceRenderCulling {
     public static final String MODID = "enclosed_culling";
     public static final Logger LOGGER = LogManager.getLogger();
 
-    @SuppressWarnings("deprecation") // 暂时使用已弃用的API,直到找到替代方案
+    @SuppressWarnings("deprecation") // 暂时抑制过时警告，等待Forge提供新的API
     public EnclosedSpaceRenderCulling() {
+        // 获取事件总线
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
         
-        // 使用正确的配置注册方式
+        // 注册配置
         ModLoadingContext.get().registerConfig(net.minecraftforge.fml.config.ModConfig.Type.COMMON, ModConfig.COMMON_SPEC);
         
-        // 注册事件监听器 - 使用正确的方法签名
+        // 注册事件监听器
         modEventBus.addListener(this::commonSetup);
         modEventBus.addListener(this::clientSetup);
         

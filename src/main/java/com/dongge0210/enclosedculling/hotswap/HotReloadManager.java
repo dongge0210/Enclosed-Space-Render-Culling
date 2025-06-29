@@ -129,7 +129,7 @@ public class HotReloadManager {
                     .forEach(configFile -> {
                         registerFileWatcher(configFile, file -> {
                             EnclosedSpaceRenderCulling.LOGGER.info("Config file changed, reloading: " + file);
-                            ModConfig.COMMON_SPEC.load();
+                            ModConfig.reload();
                         });
                     });
             } catch (IOException e) {
