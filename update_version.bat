@@ -22,7 +22,7 @@ echo   - 小更新: 0.1.571
 echo   - 大更新: 0.2.0
 echo   - 错误修复: 0.1.57-E1
 echo   - Bug修复: 0.1.57-B1
-echo   - 混合修复: 0.1.57-E1B1
+echo   - 混合修复: 0.1.57-E1/B1
 echo.
 
 set /p new_version="新版本号: "
