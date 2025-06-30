@@ -1,24 +1,24 @@
 package com.dongge0210.enclosedculling.debug;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 import com.dongge0210.enclosedculling.EnclosedSpaceRenderCulling;
 import com.dongge0210.enclosedculling.config.ModConfig;
 import com.dongge0210.enclosedculling.room.RoomManager;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.network.chat.Component;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.RenderGuiEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 调试管理器 - 管理调试模式和信息显示
@@ -498,11 +498,11 @@ public class DebugManager {
         int currentY = y;
         
         // 标题
-        graphics.drawString(mc.font, Component.literal("§e[封闭空间剔除调试]"), x, currentY, 0xFFFFFF);
-        currentY += lineHeight + 2;
+        graphics.drawString(mc.font, Component.literal("§e§l[封闭空间剔除 - 调试模式]"), x, currentY, 0xFFFFFF);
+        currentY += lineHeight + 3;
         
         // 基本统计
-        String stats = String.format("检查: %d | 剔除: %d | 成功率: %.1f%%", 
+        String stats = String.format("§7方块检查: §f%d §7| 剔除: §a%d §7| 成功率: §e%.1f%%", 
             totalCullingChecks, successfulCulls, 
             totalCullingChecks > 0 ? (double) successfulCulls / totalCullingChecks * 100 : 0);
         graphics.drawString(mc.font, Component.literal(stats), x, currentY, 0xFFFFFF);
@@ -510,7 +510,7 @@ public class DebugManager {
         
         // 性能信息
         if (averageCheckTime > 0) {
-            String performance = String.format("平均耗时: %.3fms", averageCheckTime);
+            String performance = String.format("§7平均耗时: §f%.3fms", averageCheckTime);
             graphics.drawString(mc.font, Component.literal(performance), x, currentY, 0xFFFFFF);
             currentY += lineHeight;
         }
@@ -521,29 +521,59 @@ public class DebugManager {
             Integer roomId = RoomManager.getRoomIdAt(mc.level, playerPos);
             Integer groupId = RoomManager.getGroupIdAt(mc.level, playerPos);
             
-            String roomInfo = String.format("房间ID: %s | 组ID: %s", 
-                roomId != null ? roomId.toString() : "未知",
-                groupId != null ? groupId.toString() : "未知");
+            String roomInfo = String.format("§7房间ID: §f%s §7| 组ID: §f%s", 
+                roomId != null ? roomId.toString() : "§c未知",
+                groupId != null ? groupId.toString() : "§c未知");
             graphics.drawString(mc.font, Component.literal(roomInfo), x, currentY, 0xFFFFFF);
             currentY += lineHeight;
+            
+            // 房间连通性状态
+            String connectivity = RoomManager.getRoomConnectivityStatus(mc.level, playerPos, playerPos);
+            graphics.drawString(mc.font, Component.literal("§7连通性: §f" + connectivity), x, currentY, 0xFFFFFF);
+            currentY += lineHeight;
+            
         } catch (Exception e) {
-            graphics.drawString(mc.font, Component.literal("房间信息获取失败"), x, currentY, 0xFFFFFF);
+            graphics.drawString(mc.font, Component.literal("§c房间信息获取失败: " + e.getMessage()), x, currentY, 0xFFFFFF);
             currentY += lineHeight;
         }
         
         // 实体剔除统计
         if (totalEntityChecks > 0) {
-            String entityStats = String.format("实体检查: %d | 剔除: %d | 剔除率: %.1f%%",
+            String entityStats = String.format("§7实体检查: §f%d §7| 剔除: §c%d §7| 剔除率: §e%.1f%%",
                 totalEntityChecks, culledEntities,
                 (double) culledEntities / totalEntityChecks * 100);
             graphics.drawString(mc.font, Component.literal(entityStats), x, currentY, 0xFFFFFF);
             currentY += lineHeight;
         }
         
+        // 环境信息
+        try {
+            updateEnvironmentInfo(mc.level, mc.player.blockPosition());
+            String envInfo = String.format("§7环境: §f%s §7(光照: §f%d§7)", 
+                environmentType, currentLightLevel);
+            graphics.drawString(mc.font, Component.literal(envInfo), x, currentY, 0xFFFFFF);
+            currentY += lineHeight;
+        } catch (Exception e) {
+            graphics.drawString(mc.font, Component.literal("§c环境信息错误"), x, currentY, 0xFFFFFF);
+            currentY += lineHeight;
+        }
+        
         // 缓存信息
-        String cacheInfo = String.format("区块缓存: %d | 调试条目: %d",
-            RoomManager.getChunkCacheSize(), debugInfo.size());
-        graphics.drawString(mc.font, Component.literal(cacheInfo), x, currentY, 0xFFFFFF);
+        try {
+            String cacheInfo = String.format("§7区块缓存: §f%d §7| 调试条目: §f%d",
+                RoomManager.getChunkCacheSize(), debugInfo.size());
+            graphics.drawString(mc.font, Component.literal(cacheInfo), x, currentY, 0xFFFFFF);
+            currentY += lineHeight;
+        } catch (Exception e) {
+            graphics.drawString(mc.font, Component.literal("§c缓存信息错误"), x, currentY, 0xFFFFFF);
+            currentY += lineHeight;
+        }
+        
+        // 配置状态
+        String configStatus = String.format("§7剔除功能: %s §7| 热重载: %s", 
+            ModConfig.COMMON.enableCulling.get() ? "§a启用" : "§c禁用",
+            ModConfig.COMMON.enableHotReload.get() ? "§a启用" : "§c禁用");
+        graphics.drawString(mc.font, Component.literal(configStatus), x, currentY, 0xFFFFFF);
     }
 
     /**
