@@ -1,5 +1,6 @@
 package com.dongge0210.enclosedculling.culling;
 
+import com.dongge0210.enclosedculling.EnclosedSpaceRenderCulling;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import java.util.*;
@@ -36,14 +37,60 @@ public class SpaceConnectivityAnalyzer {
                 }
             }
         }
+        
+        // 记录分析结果
+        EnclosedSpaceRenderCulling.LOGGER.debug("Space connectivity analysis completed: {} visible positions analyzed in {} steps", 
+            visibleSpaces.size(), steps);
     }
 
     private boolean isAirOrTransparent(BlockPos pos) {
-    // 只穿透空气和可替换方块（比如火把、花等）
-    return world.getBlockState(pos).isAir() || world.getBlockState(pos).canBeReplaced();
+        var state = world.getBlockState(pos);
+        
+        // 空气方块
+        if (state.isAir()) {
+            return true;
+        }
+        
+        // 可替换方块（如火把、花、草等）
+        if (state.canBeReplaced()) {
+            return true;
+        }
+        
+        // 透明方块（如玻璃）
+        if (!state.canOcclude()) {
+            return true;
+        }
+        
+        // 检查特定的透明方块类型
+        String blockId = state.getBlock().getDescriptionId();
+        if (blockId.contains("glass") || 
+            blockId.contains("fence") || 
+            blockId.contains("door") ||
+            blockId.contains("gate") ||
+            blockId.contains("trapdoor") ||
+            blockId.contains("bars") ||
+            blockId.contains("pane")) {
+            return true;
+        }
+        
+        // 液体也应该视为可通过
+        if (state.getFluidState().isEmpty() == false) {
+            return true;
+        }
+        
+        return false;
     }
 
     public boolean isVisible(BlockPos pos) {
         return visibleSpaces.contains(pos);
+    }
+    
+    // 调试方法
+    public int getVisibleSpaceCount() {
+        return visibleSpaces.size();
+    }
+    
+    public boolean hasAnalyzedAnySpaces() {
+        return !visibleSpaces.isEmpty();
     }
 }

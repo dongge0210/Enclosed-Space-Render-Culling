@@ -1,8 +1,10 @@
 # Enclosed-Space-Render-Culling
 
-<span style="color: red; font-size: 24px; font-weight: bold;">⚠️ 重要警告:此模组仅能在正式环境中使用,在开发环境（runClient）中将会导致 Mixin 报错！</span>
+> **完整的开发文档和总结**: 请查看 **[SUMMARY/](./SUMMARY/)** 文件夹，包含详细的功能实现、GPU优化、兼容性处理等完整文档。
 
-封闭空间渲染优化 (Enclosed Space Render Culling) 
+<span style="color: red; font-size: 24px; font-weight: bold;">重要警告:此模组仅能在正式环境中使用,在开发环境（runClient）中将会导致 Mixin 报错！</span>
+
+封闭空间渲染优化 (Enclosed Space Render Culling)
 
 **ModID**: `enclosed_culling`
 
@@ -112,6 +114,28 @@ v1.0.0 (2025-06-28)
 - 集成Create模组兼容性
 - 实现LRU缓存和Mixin优化
 
+### 版本管理
+
+本项目采用规范化的版本号管理系统：
+
+- **正常新功能**: `X.Y.Z` (如 0.1.58)
+- **小更新**: `X.Y.ZZ` (如 0.1.571)  
+- **大更新**: `X.Y.0` (如 0.2.0)
+- **错误修复**: `X.Y.Z-E{number}` (如 0.1.57-E1)
+- **Bug修复**: `X.Y.Z-B{number}` (如 0.1.57-B1)
+- **混合修复**: `X.Y.Z-E{number}B{number}` (如 0.1.57-E1B1)
+
+详细的版本管理规范请参考 [VERSION_SPECIFICATION.md](./VERSION_SPECIFICATION.md)
+
+#### 版本更新工具
+```bash
+# Linux/macOS/Git Bash
+./update_version.sh
+
+# Windows CMD
+update_version.bat
+```
+
 ### 许可证
 
 本项目采用 MIT 许可证开源。详见 [LICENSE](LICENSE) 文件。
@@ -121,3 +145,5 @@ v1.0.0 (2025-06-28)
 - 源代码: https://github.com/dongge0210/Enclosed-Space-Render-Culling
 - 问题反馈: https://github.com/dongge0210/Enclosed-Space-Render-Culling/issues
 - 开发文档: https://github.com/dongge0210/Enclosed-Space-Render-Culling/wiki
+
+### 注意：所有的开发文档均由AI生成。

@@ -16,7 +16,6 @@ out
 # gradle
 build
 .gradle
-FINAL_BUILD_SUMMARY.md
 
 # other
 eclipse
@@ -27,3 +26,4 @@ forge*changelog.txt
 
 #MAC fucking Trash
 .DS_Store
+._*

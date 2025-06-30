@@ -148,38 +148,38 @@ public class DevelopmentInitializer {
      */
     public static String getSystemStatus() {
         StringBuilder status = new StringBuilder();
-        status.append("=== Enclosed Culling System Status ===\n");
+        status.append("=== 封闭空间剔除系统状态 ===\n");
         
-        status.append("Initialization: ").append(initialized ? "✓" : "✗").append("\n");
+        status.append("初始化状态: ").append(initialized ? "✓ 已完成" : "✗ 未完成").append("\n");
         
-        status.append("Script Manager: ");
+        status.append("脚本管理器: ");
         if (ScriptManager.isInitialized()) {
-            status.append("✓ Running\n");
+            status.append("✓ 运行中\n");
             status.append("  ").append(ScriptManager.getEngineInfo().replace("\n", "\n  "));
         } else {
-            status.append("✗ Not initialized\n");
+            status.append("✗ 未初始化\n");
         }
         
-        status.append("Hot Reload: ");
+        status.append("热重载: ");
         if (HotReloadManager.isHotReloadEnabled()) {
-            status.append("✓ Enabled\n");
+            status.append("✓ 已启用\n");
         } else {
-            status.append("✗ Disabled\n");
+            status.append("✗ 已禁用\n");
         }
         
-        status.append("Debug Mode: ");
+        status.append("调试模式: ");
         if (DebugManager.isDebugMode()) {
-            status.append("✓ Active\n");
+            status.append("✓ 已激活\n");
         } else {
-            status.append("✗ Inactive\n");
+            status.append("✗ 未激活\n");
         }
         
-        status.append("\nConfiguration:\n");
-        status.append("  Culling Enabled: ").append(ModConfig.COMMON.enableCulling.get()).append("\n");
-        status.append("  Debug Mode: ").append(ModConfig.COMMON.enableDebugMode.get()).append("\n");
-        status.append("  Hot Reload: ").append(ModConfig.COMMON.enableHotReload.get()).append("\n");
-        status.append("  Script Support: ").append(ModConfig.COMMON.enableScriptSupport.get()).append("\n");
-        status.append("  Performance Logging: ").append(ModConfig.COMMON.enablePerformanceLogging.get()).append("\n");
+        status.append("\n配置信息:\n");
+        status.append("  剔除功能: ").append(ModConfig.COMMON.enableCulling.get() ? "已启用" : "已禁用").append("\n");
+        status.append("  调试模式: ").append(ModConfig.COMMON.enableDebugMode.get() ? "已启用" : "已禁用").append("\n");
+        status.append("  热重载: ").append(ModConfig.COMMON.enableHotReload.get() ? "已启用" : "已禁用").append("\n");
+        status.append("  脚本支持: ").append(ModConfig.COMMON.enableScriptSupport.get() ? "已启用" : "已禁用").append("\n");
+        status.append("  性能日志: ").append(ModConfig.COMMON.enablePerformanceLogging.get() ? "已启用" : "已禁用").append("\n");
         
         return status.toString();
     }

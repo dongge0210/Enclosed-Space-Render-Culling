@@ -5,16 +5,14 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.registries.ForgeRegistries;
 
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Predicate;
 
 public class RoomManager {
     // --- 房间与连通群 ---
@@ -76,14 +74,21 @@ public class RoomManager {
                 visible = !scriptResult; // 脚本返回true表示应该剔除
                 reason = scriptResult ? "script_culled" : "script_visible";
             } else {
-                // 使用原有逻辑
+                // 使用改进的门连通性检测
                 int roomIdTarget = findOrCreateRoom(level, target);
                 int groupIdTarget = roomIdToGroupId.getOrDefault(roomIdTarget, roomIdTarget);
                 int groupIdPlayer = playerGroupCache.getOrDefault(playerId, -1);
                 
                 if (groupIdTarget != groupIdPlayer) {
-                    visible = false;
-                    reason = "different_group";
+                    // 检查是否有门连接
+                    boolean connectedByDoor = areRoomsConnectedByDoor(level, playerPos, target);
+                    if (connectedByDoor) {
+                        visible = true;
+                        reason = "door_connected";
+                    } else {
+                        visible = false;
+                        reason = "different_group";
+                    }
                 } else {
                     long chunkKey = chunkPosLong(target);
                     long nowTick = level.getGameTime();
@@ -126,7 +131,57 @@ public class RoomManager {
         if (posToRoomID.containsKey(pos)) {
             return posToRoomID.get(pos);
         }
-        int roomId = Objects.hash(pos.getX(), pos.getY(), pos.getZ(), System.nanoTime());
+        
+        // 使用稳定的分区哈希算法生成房间ID
+        // 将坐标按网格划分，确保相邻位置倾向于得到相同的基础ID
+        int gridX = Math.floorDiv(pos.getX(), 16); // 16x16网格
+        int gridY = Math.floorDiv(pos.getY(), 8);  // 8高度层
+        int gridZ = Math.floorDiv(pos.getZ(), 16);
+        String dimKey = level.dimension().toString();
+        
+        // 生成稳定的基础ID
+        int baseRoomId = Objects.hash(gridX, gridY, gridZ, dimKey);
+        
+        // 确保ID为正数
+        if (baseRoomId < 0) baseRoomId = -baseRoomId;
+        if (baseRoomId == 0) baseRoomId = 1;
+        
+        int roomId = baseRoomId;
+        
+        // 如果这个房间ID已经存在，检查是否真的是同一个房间区域
+        if (roomIdToGroupId.containsKey(roomId)) {
+            boolean foundExistingRoom = false;
+            // 检查是否在同一个网格区域内
+            for (Map.Entry<BlockPos, Integer> entry : posToRoomID.entrySet()) {
+                if (entry.getValue().equals(roomId)) {
+                    BlockPos existingPos = entry.getKey();
+                    int existingGridX = Math.floorDiv(existingPos.getX(), 16);
+                    int existingGridY = Math.floorDiv(existingPos.getY(), 8);
+                    int existingGridZ = Math.floorDiv(existingPos.getZ(), 16);
+                    
+                    // 如果在相同网格内，认为是同一房间
+                    if (existingGridX == gridX && existingGridY == gridY && existingGridZ == gridZ) {
+                        foundExistingRoom = true;
+                        break;
+                    }
+                }
+            }
+            
+            if (!foundExistingRoom) {
+                // 使用确定性的方式生成新ID，避免随机性
+                roomId = Objects.hash(baseRoomId, pos.getX(), pos.getZ());
+                if (roomId < 0) roomId = -roomId;
+                if (roomId == 0) roomId = baseRoomId + 1;
+                
+                // 如果还有冲突，继续增量查找
+                int increment = 1;
+                while (roomIdToGroupId.containsKey(roomId) && increment < 1000) {
+                    roomId = baseRoomId + increment;
+                    increment++;
+                }
+            }
+        }
+        
         Set<BlockPos> roomBlocks = new HashSet<>();
         Queue<BlockPos> queue = new ArrayDeque<>();
         queue.add(pos);
@@ -182,6 +237,23 @@ public class RoomManager {
 
     private static boolean defaultJudge(BlockState state) {
         String id = ForgeRegistries.BLOCKS.getKey(state.getBlock()).toString();
+        
+        // 铁轨应该被视为透明（不阻挡房间连通）
+        if (id.contains("rail")) {
+            return true;
+        }
+        
+        // 半高方块（如楼梯、台阶）应该被视为部分透明
+        if (id.contains("slab") || id.contains("stair")) {
+            return true;
+        }
+        
+        // 栅栏和栅栏门
+        if (id.contains("fence") || id.contains("gate")) {
+            return true;
+        }
+        
+        // 原有逻辑
         return configDoorBlocks.contains(id) || state.isAir() || !state.canOcclude();
     }
 
@@ -283,11 +355,39 @@ public class RoomManager {
             }
         }
     }
+    
+    /**
+     * 获取指定位置的房间ID
+     */
+    public static Integer getRoomIdAt(Level level, BlockPos pos) {
+        try {
+            return findOrCreateRoom(level, pos);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+    
+    /**
+     * 获取指定位置的房间组ID
+     */
+    public static Integer getGroupIdAt(Level level, BlockPos pos) {
+        try {
+            int roomId = findOrCreateRoom(level, pos);
+            return roomIdToGroupId.getOrDefault(roomId, roomId);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+    
     // 简单统计接口
     public static String getRoomStats() {
         int roomCount = new HashSet<>(posToRoomID.values()).size();
         int groupCount = new HashSet<>(roomIdToGroupId.values()).size();
-        return "总房间数:" + roomCount + " 总连通群数:" + groupCount;
+        int totalPositions = posToRoomID.size();
+        int cacheSize = chunkVisibilityCache.size();
+        
+        return String.format("房间总数: %d\n连通群数: %d\n已分析位置: %d\n缓存区块: %d", 
+                roomCount, groupCount, totalPositions, cacheSize);
     }
 
     // --- 缓存清理 ---
@@ -303,5 +403,142 @@ public class RoomManager {
     public static void clearChunkCache() {
         chunkVisibilityCache.clear();
         chunkCacheTick.clear();
+    }
+    
+    // --- 房间ID稳定性管理 ---
+    private static final Map<String, Integer> playerLastRoomId = new ConcurrentHashMap<>();
+    private static final Map<String, Long> lastRoomCheckTime = new ConcurrentHashMap<>();
+    private static final Map<String, BlockPos> playerLastPosition = new ConcurrentHashMap<>();
+    private static final long ROOM_CHECK_COOLDOWN = 3000; // 3秒冷却时间，减少频繁变化
+    
+    /**
+     * 获取指定位置的房间ID（带稳定性检查）
+     */
+    public static Integer getRoomIdAtStable(Level level, BlockPos pos, String playerId) {
+        String key = playerId + "_" + level.dimension().toString();
+        long currentTime = System.currentTimeMillis();
+        Long lastCheck = lastRoomCheckTime.get(key);
+        BlockPos lastPos = playerLastPosition.get(key);
+        
+        // 如果距离上次检查时间很短，或者玩家位置变化很小，返回缓存的房间ID
+        if (lastCheck != null && (currentTime - lastCheck) < ROOM_CHECK_COOLDOWN) {
+            Integer cachedId = playerLastRoomId.get(key);
+            if (cachedId != null) {
+                // 如果玩家位置变化很小（小于4格），直接返回缓存
+                if (lastPos != null && lastPos.distSqr(pos) < 16) {
+                    return cachedId;
+                }
+                
+                // 验证缓存的房间ID是否仍然有效
+                Integer currentId = posToRoomID.get(pos);
+                if (currentId != null && currentId.equals(cachedId)) {
+                    playerLastPosition.put(key, pos);
+                    return cachedId;
+                }
+            }
+        }
+        
+        // 获取新的房间ID
+        Integer roomId = getRoomIdAt(level, pos);
+        if (roomId != null) {
+            playerLastRoomId.put(key, roomId);
+            lastRoomCheckTime.put(key, currentTime);
+            playerLastPosition.put(key, pos);
+        }
+        
+        return roomId;
+    }
+    
+    /**
+     * 检查两个房间是否通过门连通
+     */
+    public static boolean areRoomsConnectedByDoor(Level level, BlockPos pos1, BlockPos pos2) {
+        Integer room1 = getRoomIdAt(level, pos1);
+        Integer room2 = getRoomIdAt(level, pos2);
+        
+        if (room1 == null || room2 == null || room1.equals(room2)) {
+            return true; // 同一个房间或无法判断，认为连通
+        }
+        
+        // 检查两个房间之间的路径
+        Vec3 start = pos1.getCenter();
+        Vec3 end = pos2.getCenter();
+        double distance = start.distanceTo(end);
+        
+        if (distance > 32.0) {
+            return false; // 距离太远，不考虑门连接
+        }
+        
+        Vec3 direction = end.subtract(start).normalize();
+        boolean foundDoor = false;
+        
+        // 沿路径检查是否有门
+        for (double d = 1.0; d < distance; d += 0.5) {
+            Vec3 checkPos = start.add(direction.scale(d));
+            BlockPos blockPos = BlockPos.containing(checkPos);
+            BlockState state = level.getBlockState(blockPos);
+            
+            String blockName = state.getBlock().getDescriptionId();
+            if (blockName.contains("door") || blockName.contains("gate") || 
+                blockName.contains("fence_gate") || blockName.contains("trapdoor")) {
+                
+                // 检查门是否开启
+                if (isDoorOpen(state)) {
+                    foundDoor = true;
+                    break;
+                }
+            }
+        }
+        
+        return foundDoor;
+    }
+    
+    /**
+     * 检查门是否开启
+     */
+    private static boolean isDoorOpen(BlockState state) {
+        // 检查门的开启状态
+        if (state.hasProperty(net.minecraft.world.level.block.state.properties.BlockStateProperties.OPEN)) {
+            return state.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.OPEN);
+        }
+        // 对于栅栏门
+        if (state.hasProperty(net.minecraft.world.level.block.state.properties.BlockStateProperties.OPEN)) {
+            return state.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.OPEN);
+        }
+        // 默认认为是开启的（对于不确定的方块）
+        return true;
+    }
+    
+    /**
+     * 改进的可见性判断，考虑门的连通性
+     */
+    public static boolean isPositionVisibleWithDoors(Level level, BlockPos target, Vec3 playerPos) {
+        BlockPos playerBlockPos = BlockPos.containing(playerPos);
+        
+        // 首先检查基本的房间连通性
+        boolean basicVisible = isPositionVisible(level, target, playerBlockPos);
+        
+        if (basicVisible) {
+            return true; // 如果基本判断认为可见，直接返回true
+        }
+        
+        // 如果基本判断认为不可见，检查是否有门连接
+        return areRoomsConnectedByDoor(level, playerBlockPos, target);
+    }
+    
+    /**
+     * 获取两个房间之间的连通性状态
+     */
+    public static String getRoomConnectivityStatus(Level level, BlockPos pos1, BlockPos pos2) {
+        Integer room1 = getRoomIdAt(level, pos1);
+        Integer room2 = getRoomIdAt(level, pos2);
+        
+        if (room1 == null || room2 == null) {
+            return "未知";
+        }
+        if (room1.equals(room2)) {
+            return "同一房间";
+        }
+        return areRoomsConnectedByDoor(level, pos1, pos2) ? "通过门连通" : "不连通";
     }
 }

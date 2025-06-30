@@ -1,0 +1,15 @@
+{
+  "key.enclosed_culling.open_config": "打开 Enclosed Culling 配置",
+  "key.categories.enclosed_culling": "Enclosed Culling",
+  "gui.enclosed_culling.config.title": "Enclosed Culling 配置",
+  "gui.enclosed_culling.config.enable_culling": "启用剔除功能",
+  "gui.enclosed_culling.config.enable_debug": "启用调试界面",
+  "gui.enclosed_culling.config.enable_entity_rendering": "[Beta] 智能实体渲染",
+  "gui.enclosed_culling.config.save": "保存设置",
+  "gui.enclosed_culling.config.cancel": "取消",
+  "gui.enclosed_culling.config.tooltip.culling": "开启/关闭空间剔除功能",
+  "gui.enclosed_culling.config.tooltip.debug": "开启/关闭调试信息显示",
+  "gui.enclosed_culling.config.tooltip.entity_rendering": "§e实验性功能§r\\n智能实体距离渲染\\n包括夜视支持和袭击检测",
+  "gui.enclosed_culling.config.version": "§7版本 0.1.54 - 封闭空间渲染剔除",
+  "gui.enclosed_culling.config.beta_warning": "§e注意: Beta功能可能不稳定"
+}
