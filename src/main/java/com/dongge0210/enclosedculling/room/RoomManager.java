@@ -417,6 +417,25 @@ public class RoomManager {
         return String.format("房间总数: %d\n连通群数: %d\n已分析位置: %d\n缓存区块: %d", 
                 roomCount, groupCount, totalPositions, cacheSize);
     }
+    
+    /**
+     * 获取区块缓存大小
+     */
+    public static int getChunkCacheSize() {
+        return chunkVisibilityCache.size();
+    }
+    
+    /**
+     * 获取详细的缓存统计信息
+     */
+    public static String getCacheStats() {
+        int totalCachedEntries = chunkVisibilityCache.values().stream()
+            .mapToInt(Map::size)
+            .sum();
+            
+        return String.format("区块缓存: %d个区块, %d个缓存条目", 
+            chunkVisibilityCache.size(), totalCachedEntries);
+    }
 
     // --- 缓存清理 ---
     public static void clearAll() {

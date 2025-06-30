@@ -8,7 +8,6 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.RenderGuiEvent;
@@ -17,8 +16,9 @@ import net.minecraftforge.fml.common.Mod;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 调试管理器 - 管理调试模式和信息显示
@@ -86,16 +86,6 @@ public class DebugManager {
     // 添加日志输出控制
     private static final int LOG_THROTTLE_INTERVAL = 1000; // 1秒内最多输出一次相同类型的日志
     private static final Map<String, Long> lastLogTime = new ConcurrentHashMap<>();
-    
-    // 界面尺寸适配相关
-    private static float guiScale = 1.0f;
-    private static int screenWidth = 1920;
-    private static int screenHeight = 1080;
-    private static final float MIN_GUI_SCALE = 0.5f;
-    private static final float MAX_GUI_SCALE = 4.0f;
-
-    // 缓存调试信息以减少闪烁
-    private static final Map<String, String> cachedDebugStrings = new ConcurrentHashMap<>();
     
     /**
      * 切换调试模式
@@ -300,5 +290,292 @@ public class DebugManager {
                 usedMemory / 1024.0 / 1024.0,
                 totalMemory / 1024.0 / 1024.0,
                 maxMemory / 1024.0 / 1024.0);
+    }
+    
+    /**
+     * 记录详细的剔除信息
+     */
+    public static void logCullingDetails(BlockPos pos, boolean culled, String reason) {
+        if (!shouldLogDebugInfo("culling_details")) {
+            return;
+        }
+        
+        try {
+            // 使用简洁的日志格式，只记录关键信息，使用DEBUG级别
+            EnclosedSpaceRenderCulling.LOGGER.debug("[Culling] {}: {} ({})", 
+                pos.toShortString(), culled ? "CULLED" : "VISIBLE", reason);
+        } catch (Exception e) {
+            // 静默处理异常
+        }
+    }
+    
+    /**
+     * 记录调试日志
+     */
+    public static void logDebug(String message, Object... args) {
+        if (!shouldLogDebugInfo("debug_log")) {
+            return;
+        }
+        
+        try {
+            // 清理日志前缀，使用简洁的格式，只在DEBUG级别输出
+            if (args.length > 0) {
+                EnclosedSpaceRenderCulling.LOGGER.debug("[Debug] " + message, args);
+            } else {
+                EnclosedSpaceRenderCulling.LOGGER.debug("[Debug] " + message);
+            }
+        } catch (Exception e) {
+            // 静默处理异常，避免调试功能影响正常运行
+        }
+    }
+    
+    /**
+     * 检查是否应该记录调试信息（统一的实现）
+     */
+    private static boolean shouldLogDebugInfo(String logType) {
+        try {
+            if (!ModConfig.COMMON.enableDebug.get()) {
+                return false;
+            }
+            
+            long currentTime = System.currentTimeMillis();
+            Long lastTime = lastLogTime.get(logType);
+            
+            if (lastTime != null && (currentTime - lastTime) < LOG_THROTTLE_INTERVAL) {
+                return false;
+            }
+            
+            lastLogTime.put(logType, currentTime);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+    
+    /**
+     * 记录实体剔除信息
+     */
+    public static void trackEntityCulling(String entityId, String entityType, BlockPos entityPos, 
+                                        BlockPos playerPos, boolean culled, String reason) {
+        if (!ModConfig.COMMON.enableDebug.get()) {
+            return;
+        }
+        
+        totalEntityChecks++;
+        if (culled) {
+            culledEntities++;
+        }
+        
+        String key = entityId + "_" + entityType;
+        String info = String.format("%s@%s %s: %s", 
+            entityType, entityPos.toShortString(), 
+            culled ? "被剔除" : "可见", reason);
+        
+        entityCullingReasons.put(key, info);
+        lastEntityCheck.put(key, System.currentTimeMillis());
+        
+        // 跟踪房间信息
+        try {
+            Integer playerRoomId = RoomManager.getRoomIdAt(Minecraft.getInstance().level, playerPos);
+            Integer entityRoomId = RoomManager.getRoomIdAt(Minecraft.getInstance().level, entityPos);
+            
+            lastPlayerRoom = playerRoomId != null ? "房间" + playerRoomId : "未识别";
+            lastTargetRoom = entityRoomId != null ? "房间" + entityRoomId : "未识别";
+            
+            String connectivityKey = "连通性_" + playerRoomId + "_to_" + entityRoomId;
+            String connectivityInfo = String.format("玩家:%s -> 实体:%s", lastPlayerRoom, lastTargetRoom);
+            roomConnectivity.put(connectivityKey, connectivityInfo);
+            
+        } catch (Exception e) {
+            roomConnectivity.put("error", "房间检测错误: " + e.getMessage());
+        }
+        
+        // 清理过期记录（保留最近1分钟的记录）
+        long now = System.currentTimeMillis();
+        lastEntityCheck.entrySet().removeIf(entry -> now - entry.getValue() > 60000);
+        entityCullingReasons.entrySet().removeIf(entry -> 
+            !lastEntityCheck.containsKey(entry.getKey()));
+    }
+    
+    /**
+     * 强制触发房间检测（用于调试）
+     */
+    public static void triggerRoomDetection() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.level == null) return;
+        
+        BlockPos playerPos = mc.player.blockPosition();
+        try {
+            // 强制检测玩家周围的房间
+            RoomManager.getRoomIdAt(mc.level, playerPos);
+            
+            // 检测玩家周围16个方块范围内的房间
+            for (int x = -8; x <= 8; x += 4) {
+                for (int z = -8; z <= 8; z += 4) {
+                    for (int y = -4; y <= 4; y += 2) {
+                        BlockPos checkPos = playerPos.offset(x, y, z);
+                        RoomManager.getRoomIdAt(mc.level, checkPos);
+                    }
+                }
+            }
+            
+            setDebugInfo("room_detection", "已触发");
+        } catch (Exception e) {
+            setDebugInfo("room_detection_error", e.getMessage());
+        }
+    }
+    
+    /**
+     * 获取性能报告
+     */
+    public static String getPerformanceReport() {
+        StringBuilder report = new StringBuilder();
+        report.append("=== 封闭空间剔除性能报告 ===\n");
+        report.append("总检查次数: ").append(totalCullingChecks).append("\n");
+        report.append("成功剔除次数: ").append(successfulCulls).append("\n");
+        
+        if (totalCullingChecks > 0) {
+            report.append("剔除成功率: ").append(String.format("%.2f%%", 
+                (double) successfulCulls / totalCullingChecks * 100)).append("\n");
+        }
+        
+        if (averageCheckTime > 0) {
+            report.append("平均检查耗时: ").append(String.format("%.3fms", averageCheckTime)).append("\n");
+        }
+        
+        if (totalEntityChecks > 0) {
+            report.append("实体检查次数: ").append(totalEntityChecks).append("\n");
+            report.append("被剔除实体: ").append(culledEntities).append("\n");
+            report.append("实体剔除率: ").append(String.format("%.2f%%", 
+                (double) culledEntities / totalEntityChecks * 100)).append("\n");
+        }
+        
+        report.append("调试信息条目: ").append(debugInfo.size()).append("\n");
+        report.append("活跃计时器: ").append(performanceTimers.size()).append("\n");
+        
+        // 添加内存使用情况
+        report.append("\n").append(getMemoryUsage()).append("\n");
+        
+        return report.toString();
+    }
+
+    /**
+     * 渲染调试信息到屏幕
+     */
+    @OnlyIn(Dist.CLIENT)
+    @SubscribeEvent
+    public static void onRenderGui(RenderGuiEvent.Post event) {
+        Minecraft mc = Minecraft.getInstance();
+        
+        // 检查是否启用调试模式
+        try {
+            if (!ModConfig.COMMON.enableDebug.get()) {
+                return;
+            }
+        } catch (Exception e) {
+            return;
+        }
+        
+        // 检查GUI是否被关闭
+        if (mc.options.hideGui) {
+            return;
+        }
+        
+        // 简单的调试信息显示
+        renderSimpleDebugInfo(event.getGuiGraphics());
+    }
+    
+    /**
+     * 渲染简单的调试信息
+     */
+    private static void renderSimpleDebugInfo(GuiGraphics graphics) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.level == null) return;
+        
+        int x = 10;
+        int y = 10;
+        int lineHeight = 12;
+        int currentY = y;
+        
+        // 标题
+        graphics.drawString(mc.font, Component.literal("§e[封闭空间剔除调试]"), x, currentY, 0xFFFFFF);
+        currentY += lineHeight + 2;
+        
+        // 基本统计
+        String stats = String.format("检查: %d | 剔除: %d | 成功率: %.1f%%", 
+            totalCullingChecks, successfulCulls, 
+            totalCullingChecks > 0 ? (double) successfulCulls / totalCullingChecks * 100 : 0);
+        graphics.drawString(mc.font, Component.literal(stats), x, currentY, 0xFFFFFF);
+        currentY += lineHeight;
+        
+        // 性能信息
+        if (averageCheckTime > 0) {
+            String performance = String.format("平均耗时: %.3fms", averageCheckTime);
+            graphics.drawString(mc.font, Component.literal(performance), x, currentY, 0xFFFFFF);
+            currentY += lineHeight;
+        }
+        
+        // 房间信息
+        try {
+            BlockPos playerPos = mc.player.blockPosition();
+            Integer roomId = RoomManager.getRoomIdAt(mc.level, playerPos);
+            Integer groupId = RoomManager.getGroupIdAt(mc.level, playerPos);
+            
+            String roomInfo = String.format("房间ID: %s | 组ID: %s", 
+                roomId != null ? roomId.toString() : "未知",
+                groupId != null ? groupId.toString() : "未知");
+            graphics.drawString(mc.font, Component.literal(roomInfo), x, currentY, 0xFFFFFF);
+            currentY += lineHeight;
+        } catch (Exception e) {
+            graphics.drawString(mc.font, Component.literal("房间信息获取失败"), x, currentY, 0xFFFFFF);
+            currentY += lineHeight;
+        }
+        
+        // 实体剔除统计
+        if (totalEntityChecks > 0) {
+            String entityStats = String.format("实体检查: %d | 剔除: %d | 剔除率: %.1f%%",
+                totalEntityChecks, culledEntities,
+                (double) culledEntities / totalEntityChecks * 100);
+            graphics.drawString(mc.font, Component.literal(entityStats), x, currentY, 0xFFFFFF);
+            currentY += lineHeight;
+        }
+        
+        // 缓存信息
+        String cacheInfo = String.format("区块缓存: %d | 调试条目: %d",
+            RoomManager.getChunkCacheSize(), debugInfo.size());
+        graphics.drawString(mc.font, Component.literal(cacheInfo), x, currentY, 0xFFFFFF);
+    }
+
+    /**
+     * 更新环境信息
+     */
+    public static void updateEnvironmentInfo(Level level, BlockPos playerPos) {
+        if (!ModConfig.COMMON.enableDebug.get()) return;
+        
+        try {
+            // 更新光照等级
+            currentLightLevel = level.getMaxLocalRawBrightness(playerPos);
+            
+            // 判断环境类型
+            if (currentLightLevel < MIN_LIGHT_LEVEL) {
+                environmentType = "极暗";
+            } else if (currentLightLevel < DARK_ENVIRONMENT_THRESHOLD) {
+                environmentType = "暗";
+            } else {
+                environmentType = "亮";
+            }
+            
+            // 判断是否在洞穴中
+            isInCave = playerPos.getY() < 60 && !level.canSeeSky(playerPos);
+            
+            // 更新玩家渲染距离
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.options != null) {
+                playerRenderDistance = mc.options.renderDistance().get() * 16.0f;
+            }
+            
+        } catch (Exception e) {
+            environmentType = "错误";
+        }
     }
 }

@@ -19,19 +19,27 @@ public class EnclosedSpaceRenderCulling {
     public static final String MODID = "enclosed_culling";
     public static final Logger LOGGER = LogManager.getLogger();
 
-    @SuppressWarnings("deprecation") // 暂时抑制过时警告，等待Forge提供新的API
-    public EnclosedSpaceRenderCulling() {
-        // 获取事件总线
-        IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
+    public EnclosedSpaceRenderCulling(IEventBus modEventBus) {
+        // 使用新的构造函数注入方式，避免过时警告
         
         // 注册配置
-        ModLoadingContext.get().registerConfig(net.minecraftforge.fml.config.ModConfig.Type.COMMON, ModConfig.COMMON_SPEC);
+        ModLoadingContext modLoadingContext = ModLoadingContext.get();
+        modLoadingContext.registerConfig(net.minecraftforge.fml.config.ModConfig.Type.COMMON, ModConfig.COMMON_SPEC);
+        
+        // 初始化Create兼容性（在mod构造函数中调用）
+        com.dongge0210.enclosedculling.compat.CreateCompatibility.init();
         
         // 注册事件监听器
         modEventBus.addListener(this::commonSetup);
         modEventBus.addListener(this::clientSetup);
         
         LOGGER.info("EnclosedSpaceRenderCulling constructor completed successfully");
+    }
+
+    // 保持旧的无参构造函数以向后兼容
+    @SuppressWarnings("deprecation")
+    public EnclosedSpaceRenderCulling() {
+        this(FMLJavaModLoadingContext.get().getModEventBus());
     }
 
     private void clientSetup(final FMLClientSetupEvent event) {
