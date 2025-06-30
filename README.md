@@ -114,28 +114,6 @@ v1.0.0 (2025-06-28)
 - 集成Create模组兼容性
 - 实现LRU缓存和Mixin优化
 
-### 版本管理
-
-本项目采用规范化的版本号管理系统：
-
-- **正常新功能**: `X.Y.Z` (如 0.1.58)
-- **小更新**: `X.Y.ZZ` (如 0.1.571)  
-- **大更新**: `X.Y.0` (如 0.2.0)
-- **错误修复**: `X.Y.Z-E{number}` (如 0.1.57-E1)
-- **Bug修复**: `X.Y.Z-B{number}` (如 0.1.57-B1)
-- **混合修复**: `X.Y.Z-E{number}B{number}` (如 0.1.57-E1B1)
-
-详细的版本管理规范请参考 [VERSION_SPECIFICATION.md](./VERSION_SPECIFICATION.md)
-
-#### 版本更新工具
-```bash
-# Linux/macOS/Git Bash
-./update_version.sh
-
-# Windows CMD
-update_version.bat
-```
-
 ### 许可证
 
 本项目采用 MIT 许可证开源。详见 [LICENSE](LICENSE) 文件。

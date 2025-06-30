@@ -163,14 +163,6 @@ tasks.named('processResources', ProcessResources).configure {
     filesMatching(['META-INF/mods.toml', 'pack.mcmeta']) {
         expand replaceProperties + [project: project]
     }
-    
-    // 生成version.properties文件，供VersionUtil读取
-    doLast {
-        def versionFile = new File(destinationDir, 'version.properties')
-        versionFile.parentFile.mkdirs()
-        versionFile.text = "mod_version=${mod_version}\n"
-        println "Generated version.properties with version: ${mod_version}"
-    }
 }
 
 // 示例:如何将属性写入 manifest 以便运行时读取。

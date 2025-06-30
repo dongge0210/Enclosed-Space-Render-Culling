@@ -1,7 +1,6 @@
 package com.dongge0210.enclosedculling.gui;
 
 import com.dongge0210.enclosedculling.config.ModConfig;
-import com.dongge0210.enclosedculling.util.VersionUtil;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Checkbox;
@@ -90,9 +89,9 @@ public class ConfigScreen extends Screen {
         // 标题
         guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, 20, 0xFFFFFF);
         
-        // 版本信息 - 动态读取
+        // 版本信息
         guiGraphics.drawCenteredString(this.font, 
-            Component.literal(VersionUtil.getFormattedVersion()), 
+            Component.literal("§7版本 0.1.58 - 封闭空间渲染剔除"), 
             this.width / 2, this.height - 30, 0xAAAAAAA);
             
         // 功能分离说明
