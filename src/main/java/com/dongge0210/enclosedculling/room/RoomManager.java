@@ -55,41 +55,39 @@ public class RoomManager {
         playerGroupCache.put(playerId, groupId);
         groupIdToPlayers.computeIfAbsent(groupId, k -> ConcurrentHashMap.newKeySet()).add(playerId);
     }
+
+    // 添加日志频率控制
+    private static final Map<String, Long> lastLogTime = new ConcurrentHashMap<>();
+    private static final int LOG_THROTTLE_INTERVAL = 5000; // 5秒内最多输出一次相同类型的日志
+
     public static boolean isPositionVisible(Level level, BlockPos target, BlockPos playerPos, UUID playerId) {
-        // 开始性能计时
+        // 性能优化：减少重复计算
         com.dongge0210.enclosedculling.debug.DebugManager.startTimer("culling_check");
-        
-        // 调用脚本钩子
-        com.dongge0210.enclosedculling.hotswap.ScriptManager.callBeforeCullingCheck(target, playerPos);
         
         boolean visible = true;
         String reason = "default_visible";
         
         try {
-            // 首先检查脚本是否有自定义逻辑
+            // 脚本钩子检查
             Boolean scriptResult = com.dongge0210.enclosedculling.hotswap.ScriptManager.callShouldCullBlock(
                 target, level.getBlockState(target), playerPos);
             
             if (scriptResult != null) {
-                visible = !scriptResult; // 脚本返回true表示应该剔除
+                visible = !scriptResult;
                 reason = scriptResult ? "script_culled" : "script_visible";
             } else {
-                // 使用改进的门连通性检测
+                // 改进的房间连通性检测
                 int roomIdTarget = findOrCreateRoom(level, target);
                 int groupIdTarget = roomIdToGroupId.getOrDefault(roomIdTarget, roomIdTarget);
                 int groupIdPlayer = playerGroupCache.getOrDefault(playerId, -1);
                 
                 if (groupIdTarget != groupIdPlayer) {
-                    // 检查是否有门连接
+                    // 优化门连接检查
                     boolean connectedByDoor = areRoomsConnectedByDoor(level, playerPos, target);
-                    if (connectedByDoor) {
-                        visible = true;
-                        reason = "door_connected";
-                    } else {
-                        visible = false;
-                        reason = "different_group";
-                    }
+                    visible = connectedByDoor;
+                    reason = connectedByDoor ? "door_connected" : "different_group";
                 } else {
+                    // 使用缓存的视线检查结果
                     long chunkKey = chunkPosLong(target);
                     long nowTick = level.getGameTime();
                     Map<UUID, Boolean> chunkCache = chunkVisibilityCache.computeIfAbsent(chunkKey, k -> new ConcurrentHashMap<>());
@@ -108,15 +106,22 @@ public class RoomManager {
                 }
             }
             
-            // 记录调试信息
-            com.dongge0210.enclosedculling.debug.DebugManager.recordCullingResult(!visible);
-            com.dongge0210.enclosedculling.debug.DebugManager.logCullingDetails(target, !visible, reason);
+            // 减少调试记录频率
+            if (shouldLogDebugInfo("culling_result")) {
+                com.dongge0210.enclosedculling.debug.DebugManager.recordCullingResult(!visible);
+                com.dongge0210.enclosedculling.debug.DebugManager.logCullingDetails(target, !visible, reason);
+            }
             
+        } catch (Exception e) {
+            // 异常时默认可见，避免过度剔除
+            visible = true;
+            reason = "exception_fallback";
+            
+            if (shouldLogDebugInfo("culling_error")) {
+                com.dongge0210.enclosedculling.debug.DebugManager.logDebug("剔除检查异常: {}", e.getMessage());
+            }
         } finally {
-            // 结束性能计时
             com.dongge0210.enclosedculling.debug.DebugManager.endTimer("culling_check");
-            
-            // 调用脚本钩子
             com.dongge0210.enclosedculling.hotswap.ScriptManager.callAfterCullingCheck(target, !visible, reason);
         }
         
@@ -124,6 +129,29 @@ public class RoomManager {
     }
     public static boolean isPositionVisible(Level level, BlockPos target, BlockPos playerPos) {
         return hasLineOfSight(level, playerPos, target);
+    }
+
+    /**
+     * 检查是否应该记录调试信息
+     */
+    private static boolean shouldLogDebugInfo(String logType) {
+        try {
+            if (!com.dongge0210.enclosedculling.config.ModConfig.COMMON.enableDebugMode.get()) {
+                return false;
+            }
+            
+            long currentTime = System.currentTimeMillis();
+            Long lastTime = lastLogTime.get(logType);
+            
+            if (lastTime != null && (currentTime - lastTime) < LOG_THROTTLE_INTERVAL) {
+                return false;
+            }
+            
+            lastLogTime.put(logType, currentTime);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     // --- 房间算法 ---

@@ -85,6 +85,10 @@ minecraft {
             // 以逗号分隔的命名空间列表,指定加载哪些 gametest。空为全部命名空间。
             property 'forge.enabledGameTestNamespaces', mod_id
             
+            // 调整日志级别，避免调试信息刷屏
+            property 'forge.logging.console.level', 'info'
+            property 'forge.logging.markers', 'REGISTRIES'
+            
             // Mixin refmap remapping 配置
             property 'mixin.env.remapRefMap', 'true'
             property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
@@ -93,6 +97,9 @@ minecraft {
         server {
             property 'forge.enabledGameTestNamespaces', mod_id
             args '--nogui'
+            
+            // 调整服务器端日志级别
+            property 'forge.logging.console.level', 'info'
             
             // Mixin refmap remapping 配置
             property 'mixin.env.remapRefMap', 'true'
@@ -104,6 +111,9 @@ minecraft {
         // gametest 系统对其他运行配置也默认启用,可通过 /test 命令访问。
         gameTestServer {
             property 'forge.enabledGameTestNamespaces', mod_id
+            
+            // 测试服务器使用更低的日志级别
+            property 'forge.logging.console.level', 'warn'
             
             // Mixin refmap remapping 配置
             property 'mixin.env.remapRefMap', 'true'
@@ -125,25 +135,45 @@ sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 repositories {
     mavenCentral()
-    // Create Maven 仓库
-    maven { url = "https://maven.createmod.net" } // Create, Ponder, Flywheel
-    maven { url = "https://maven.tterrag.com/" } // Registrate
+    // Create Maven 仓库 - 仅在需要时使用
+    maven { 
+        url = "https://maven.createmod.net"
+        content {
+            includeGroup "com.simibubi.create"
+            includeGroup "net.createmod.ponder"
+            includeGroup "dev.engine-room.flywheel"
+        }
+    }
+    maven { 
+        url = "https://maven.tterrag.com/"
+        content {
+            includeGroup "com.tterrag.registrate"
+        }
+    }
+    // Mixin Extras，放着需要留着
+    maven {
+        url = "https://repo.spongepowered.org/maven"
+        content {
+            includeGroup "io.github.llamalad7"
+        }
+    }
 }
-
 
 dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
 
-    // Create 及其依赖项 - 使用 Maven 仓库
-    implementation(fg.deobf("com.simibubi.create:create-${minecraft_version}:${create_version}:slim") { transitive = false })
-    implementation(fg.deobf("net.createmod.ponder:Ponder-Forge-${minecraft_version}:${ponder_version}"))
-    compileOnly(fg.deobf("dev.engine-room.flywheel:flywheel-forge-api-${minecraft_version}:${flywheel_version}"))
-    runtimeOnly(fg.deobf("dev.engine-room.flywheel:flywheel-forge-${minecraft_version}:${flywheel_version}"))
-    implementation(fg.deobf("com.tterrag.registrate:Registrate:${registrate_version}"))
-    
-    // Mixin 扩展
-    compileOnly(annotationProcessor("io.github.llamalad7:mixinextras-common:0.4.1"))
+    // Mixin 扩展 - 核心功能
+    annotationProcessor("io.github.llamalad7:mixinextras-common:0.4.1")
     implementation("io.github.llamalad7:mixinextras-forge:0.4.1")
+    
+    // Create 及其依赖项 - 完全可选，避免强制依赖
+    if (project.hasProperty('include_create_compat') && project.property('include_create_compat') == 'true') {
+        compileOnly(fg.deobf("com.simibubi.create:create-${minecraft_version}:${create_version}:slim") { transitive = false })
+        compileOnly(fg.deobf("net.createmod.ponder:Ponder-Forge-${minecraft_version}:${ponder_version}"))
+        compileOnly(fg.deobf("dev.engine-room.flywheel:flywheel-forge-api-${minecraft_version}:${flywheel_version}"))
+        runtimeOnly(fg.deobf("dev.engine-room.flywheel:flywheel-forge-${minecraft_version}:${flywheel_version}"))
+        compileOnly(fg.deobf("com.tterrag.registrate:Registrate:${registrate_version}"))
+    }
 }
 
 // 此代码块会在指定资源目标中展开所有声明的替换属性。
@@ -202,7 +232,50 @@ publishing {
     }
 }
 
-
+// 优化编译选项
 tasks.withType(JavaCompile).configureEach {
-    options.encoding = 'UTF-8' // Java 编译使用 UTF-8 字符集
+    options.encoding = 'UTF-8'
+    options.compilerArgs.addAll([
+        '-Xlint:deprecation',
+        '-Xlint:unchecked'
+    ])
+    
+    // 提高编译性能
+    options.fork = true
+    options.incremental = true
+}
+
+// 清理任务优化
+tasks.register('cleanDebug') {
+    group = 'build'
+    description = '清理调试相关的临时文件'
+    doLast {
+        delete fileTree(dir: 'run', includes: ['**/*.log', '**/debug-*.txt'])
+        delete fileTree(dir: 'logs', includes: ['debug-*.log'])
+    }
+}
+
+// 添加调试信息任务
+tasks.register('debugInfo') {
+    group = 'help'
+    description = '显示项目调试信息'
+    doLast {
+        println "Mod ID: ${mod_id}"
+        println "Mod Version: ${mod_version}"
+        println "Minecraft Version: ${minecraft_version}"
+        println "Forge Version: ${forge_version}"
+        println "Java Version: ${System.getProperty('java.version')}"
+        println "Gradle Version: ${gradle.gradleVersion}"
+        
+        if (project.hasProperty('include_create_compat')) {
+            println "Create Compatibility: ${project.property('include_create_compat')}"
+        } else {
+            println "Create Compatibility: disabled (default)"
+        }
+    }
+}
+
+// 构建前清理
+tasks.named('build').configure {
+    dependsOn 'cleanDebug'
 }
