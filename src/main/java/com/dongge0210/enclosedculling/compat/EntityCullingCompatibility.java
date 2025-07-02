@@ -1,11 +1,13 @@
 package com.dongge0210.enclosedculling.compat;
 
-import net.minecraftforge.fml.ModList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+
 import com.dongge0210.enclosedculling.EnclosedSpaceRenderCulling;
 import com.dongge0210.enclosedculling.config.ModConfig;
-import java.util.Set;
-import java.util.HashSet;
-import java.util.Arrays;
+
+import net.minecraftforge.fml.ModList;
 
 /**
  * EntityCulling兼容性管理器
@@ -165,25 +167,8 @@ public class EntityCullingCompatibility {
      * 检查是否应该跳过实体剔除功能
      */
     public static boolean shouldSkipEntityCulling() {
-        // 检查配置：如果强制启用实体剔除，则不跳过
-        try {
-            if (ModConfig.COMMON.forceEntityCulling.get()) {
-                return false;
-            }
-        } catch (Exception e) {
-            // 配置未加载时的默认行为
-        }
-        
-        // 如果自动禁用冲突功能且检测到EntityCulling，则跳过
-        try {
-            if (ModConfig.COMMON.autoDisableConflictingFeatures.get() && entityCullingDetected) {
-                return compatibilityEnabled;
-            }
-        } catch (Exception e) {
-            // 配置未加载时使用默认逻辑
-        }
-        
-        return entityCullingDetected && compatibilityEnabled;
+        // 实体剔除功能已移除，总是跳过
+        return true;
     }
     
     /**
@@ -253,8 +238,8 @@ public class EntityCullingCompatibility {
             EnclosedSpaceRenderCulling.LOGGER.info("Entity culling will be handled by EntityCulling MOD.");
             EnclosedSpaceRenderCulling.LOGGER.info("");
             EnclosedSpaceRenderCulling.LOGGER.info("To override this behavior:");
-            EnclosedSpaceRenderCulling.LOGGER.info("- Set 'forceEntityCulling=true' in config");
-            EnclosedSpaceRenderCulling.LOGGER.info("- Use '/enclosedculling compat' command for status");
+            EnclosedSpaceRenderCulling.LOGGER.info("- 实体剔除功能已从此版本中移除");
+            EnclosedSpaceRenderCulling.LOGGER.info("- 本MOD现在只专注于空间剔除和方块剔除功能");
             EnclosedSpaceRenderCulling.LOGGER.info("===========================================");
         }
     }

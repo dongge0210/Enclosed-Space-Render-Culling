@@ -62,21 +62,33 @@ public class DevelopmentInitializer {
     private static void initializeAllSystems() {
         try {
             // 1. 首先初始化脚本管理器
-            if (ModConfig.COMMON.enableScriptSupport.get()) {
-                ScriptManager.initialize();
-                EnclosedSpaceRenderCulling.LOGGER.info("Script manager initialized");
+            try {
+                if (ModConfig.COMMON.enableScriptSupport.get()) {
+                    ScriptManager.initialize();
+                    EnclosedSpaceRenderCulling.LOGGER.info("Script manager initialized");
+                }
+            } catch (Exception e) {
+                EnclosedSpaceRenderCulling.LOGGER.warn("Could not check script support config, skipping script manager initialization");
             }
             
             // 2. 初始化热重载管理器
-            if (ModConfig.COMMON.enableHotReload.get()) {
-                HotReloadManager.initialize();
-                EnclosedSpaceRenderCulling.LOGGER.info("Hot reload manager initialized");
+            try {
+                if (ModConfig.COMMON.enableHotReload.get()) {
+                    HotReloadManager.initialize();
+                    EnclosedSpaceRenderCulling.LOGGER.info("Hot reload manager initialized");
+                }
+            } catch (Exception e) {
+                EnclosedSpaceRenderCulling.LOGGER.warn("Could not check hot reload config, skipping hot reload manager initialization");
             }
             
             // 3. 初始化调试管理器
-            if (ModConfig.COMMON.enableDebugMode.get()) {
-                DebugManager.resetStats();
-                EnclosedSpaceRenderCulling.LOGGER.info("Debug manager initialized");
+            try {
+                if (ModConfig.COMMON.enableDebugMode.get()) {
+                    DebugManager.resetStats();
+                    EnclosedSpaceRenderCulling.LOGGER.info("Debug manager initialized");
+                }
+            } catch (Exception e) {
+                EnclosedSpaceRenderCulling.LOGGER.warn("Could not check debug mode config, skipping debug manager initialization");
             }
             
             // 4. 创建示例文件
@@ -114,7 +126,12 @@ public class DevelopmentInitializer {
      * 设置性能监控
      */
     private static void setupPerformanceMonitoring() {
-        if (!ModConfig.COMMON.enablePerformanceLogging.get()) return;
+        try {
+            if (!ModConfig.COMMON.enablePerformanceLogging.get()) return;
+        } catch (Exception e) {
+            EnclosedSpaceRenderCulling.LOGGER.warn("Could not check performance logging config, skipping performance monitoring");
+            return;
+        }
         
         // 注册性能监控任务
         Thread performanceMonitor = new Thread(() -> {
@@ -123,8 +140,12 @@ public class DevelopmentInitializer {
                     Thread.sleep(30000); // 每30秒检查一次
                     
                     String report = DebugManager.getPerformanceReport();
-                    if (ModConfig.COMMON.enableDebugMode.get()) {
-                        EnclosedSpaceRenderCulling.LOGGER.info("Performance Report:\n" + report);
+                    try {
+                        if (ModConfig.COMMON.enableDebugMode.get()) {
+                            EnclosedSpaceRenderCulling.LOGGER.info("Performance Report:\n" + report);
+                        }
+                    } catch (Exception e) {
+                        // 配置访问失败，跳过日志输出
                     }
                     
                 } catch (InterruptedException e) {
@@ -175,11 +196,15 @@ public class DevelopmentInitializer {
         }
         
         status.append("\n配置信息:\n");
-        status.append("  剔除功能: ").append(ModConfig.COMMON.enableCulling.get() ? "已启用" : "已禁用").append("\n");
-        status.append("  调试模式: ").append(ModConfig.COMMON.enableDebugMode.get() ? "已启用" : "已禁用").append("\n");
-        status.append("  热重载: ").append(ModConfig.COMMON.enableHotReload.get() ? "已启用" : "已禁用").append("\n");
-        status.append("  脚本支持: ").append(ModConfig.COMMON.enableScriptSupport.get() ? "已启用" : "已禁用").append("\n");
-        status.append("  性能日志: ").append(ModConfig.COMMON.enablePerformanceLogging.get() ? "已启用" : "已禁用").append("\n");
+        try {
+            status.append("  剔除功能: ").append(ModConfig.COMMON.enableCulling.get() ? "已启用" : "已禁用").append("\n");
+            status.append("  调试模式: ").append(ModConfig.COMMON.enableDebugMode.get() ? "已启用" : "已禁用").append("\n");
+            status.append("  热重载: ").append(ModConfig.COMMON.enableHotReload.get() ? "已启用" : "已禁用").append("\n");
+            status.append("  脚本支持: ").append(ModConfig.COMMON.enableScriptSupport.get() ? "已启用" : "已禁用").append("\n");
+            status.append("  性能日志: ").append(ModConfig.COMMON.enablePerformanceLogging.get() ? "已启用" : "已禁用").append("\n");
+        } catch (Exception e) {
+            status.append("  配置信息: 配置尚未加载完成\n");
+        }
         
         return status.toString();
     }
@@ -204,16 +229,21 @@ public class DevelopmentInitializer {
         try {
             boolean healthy = true;
             
-            // 检查脚本管理器
-            if (ModConfig.COMMON.enableScriptSupport.get() && !ScriptManager.isInitialized()) {
-                EnclosedSpaceRenderCulling.LOGGER.warn("Script manager should be initialized but isn't");
-                healthy = false;
-            }
-            
-            // 检查热重载
-            if (ModConfig.COMMON.enableHotReload.get() && !HotReloadManager.isHotReloadEnabled()) {
-                EnclosedSpaceRenderCulling.LOGGER.warn("Hot reload should be enabled but isn't");
-                healthy = false;
+            try {
+                // 检查脚本管理器
+                if (ModConfig.COMMON.enableScriptSupport.get() && !ScriptManager.isInitialized()) {
+                    EnclosedSpaceRenderCulling.LOGGER.warn("Script manager should be initialized but isn't");
+                    healthy = false;
+                }
+                
+                // 检查热重载
+                if (ModConfig.COMMON.enableHotReload.get() && !HotReloadManager.isHotReloadEnabled()) {
+                    EnclosedSpaceRenderCulling.LOGGER.warn("Hot reload should be enabled but isn't");
+                    healthy = false;
+                }
+            } catch (Exception e) {
+                EnclosedSpaceRenderCulling.LOGGER.warn("Could not check system health due to config access error");
+                return true; // 假设健康，因为配置还没有加载
             }
             
             return healthy;

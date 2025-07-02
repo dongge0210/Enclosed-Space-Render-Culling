@@ -9,7 +9,6 @@
   ],
   "client": [
     "LevelRendererMixin",
-    "EntityRenderDispatcherMixin",
     "BlockEntityRenderDispatcherMixin"
   ],
   "server": [

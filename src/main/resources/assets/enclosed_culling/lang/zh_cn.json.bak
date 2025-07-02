@@ -8,5 +8,6 @@
   "gui.enclosed_culling.config.cancel": "取消",
   "gui.enclosed_culling.config.tooltip.culling": "开启/关闭空间剔除功能",
   "gui.enclosed_culling.config.tooltip.debug": "开启/关闭调试信息显示",
-  "gui.enclosed_culling.config.version": "§7版本 0.1.16 - 封闭空间渲染剔除"
+  "gui.enclosed_culling.config.version": "§7版本 0.1.54 - 封闭空间渲染剔除",
+  "gui.enclosed_culling.config.beta_warning": "§e注意: Beta功能可能不稳定"
 }

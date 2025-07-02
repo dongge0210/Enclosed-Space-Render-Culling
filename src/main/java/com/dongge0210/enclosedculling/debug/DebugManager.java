@@ -1,3 +1,4 @@
+
 package com.dongge0210.enclosedculling.debug;
 
 import java.util.ArrayList;
@@ -37,40 +38,14 @@ public class DebugManager {
     private static final int SAMPLE_SIZE = 1000;
     private static final List<Double> recentCheckTimes = new ArrayList<>();
     
-    // 实体剔除跟踪
-    private static final Map<String, String> entityCullingReasons = new ConcurrentHashMap<>();
-    private static final Map<String, Long> lastEntityCheck = new ConcurrentHashMap<>();
-    private static long totalEntityChecks = 0;
-    private static long culledEntities = 0;
+    // 简化的方块剔除计数器
+    private static long totalBlockChecks = 0;
+    private static long blocksVisible = 0;
+    private static long blocksCulled = 0;
+    private static long lastBlockStatsUpdate = 0;
     
     // 房间连通性跟踪
-    private static final Map<String, String> roomConnectivity = new ConcurrentHashMap<>();
     private static String lastPlayerRoom = "未知";
-    private static String lastTargetRoom = "未知";
-    
-    // 距离和环境因素跟踪
-    private static final Map<String, String> distanceCullingReasons = new ConcurrentHashMap<>();
-    private static float playerRenderDistance = 0.0f;
-    private static int currentLightLevel = 0;
-    private static String environmentType = "未知";
-    private static boolean isInCave = false;
-    
-    // 距离剔除配置参数
-    private static final float FORCE_RENDER_DISTANCE = 4.0f; // 强制渲染距离（近到这个距离必须渲染）
-    private static final float EXTREME_RENDER_DISTANCE = 64.0f; // 极限显示距离
-    private static final float MAX_CULL_DISTANCE = 96.0f; // 绝对最大剔除距离
-    private static final int DARK_ENVIRONMENT_THRESHOLD = 7; // 环境过暗阈值（光照等级）
-    private static final int MIN_LIGHT_LEVEL = 5; // 最低光照等级
-    private static final float DARK_DISTANCE_PENALTY = 0.6f; // 暗环境下的距离惩罚系数
-    
-    // Mod兼容性检测
-    private static boolean hasMinimalHealthMod = false;
-    private static boolean hasExtremeRenderMod = false;
-    private static long lastModCheck = 0;
-    
-    // 极简血量显示mod相关
-    private static boolean neatModDetected = false;
-    private static float neatMaxDistance = 24.0f; // 极简血量显示的默认最大距离
     
     // RoomID稳定性监控
     private static String lastRoomId = null;
@@ -86,6 +61,14 @@ public class DebugManager {
     // 添加日志输出控制
     private static final int LOG_THROTTLE_INTERVAL = 1000; // 1秒内最多输出一次相同类型的日志
     private static final Map<String, Long> lastLogTime = new ConcurrentHashMap<>();
+    
+    // 环境信息变量
+    private static int currentLightLevel = 0;
+    private static String environmentType = "未知";
+    private static boolean isInCave = false;
+    private static float playerRenderDistance = 0;
+    private static final int MIN_LIGHT_LEVEL = 1;
+    private static final int DARK_ENVIRONMENT_THRESHOLD = 7;
     
     /**
      * 切换调试模式
@@ -168,6 +151,35 @@ public class DebugManager {
     }
     
     /**
+     * 简化的方块剔除统计 - 直接计数
+     */
+    public static void recordBlockCheck(boolean visible) {
+        if (!ModConfig.COMMON.enableDebug.get()) {
+            return;
+        }
+        
+        totalBlockChecks++;
+        if (visible) {
+            blocksVisible++;
+        } else {
+            blocksCulled++;
+        }
+        
+        // 每秒更新一次统计显示
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastBlockStatsUpdate > 1000) {
+            debugInfo.put("block_checks_total", totalBlockChecks);
+            debugInfo.put("blocks_visible", blocksVisible);
+            debugInfo.put("blocks_culled", blocksCulled);
+            if (totalBlockChecks > 0) {
+                debugInfo.put("block_cull_rate", String.format("%.1f%%", 
+                    (double) blocksCulled / totalBlockChecks * 100));
+            }
+            lastBlockStatsUpdate = currentTime;
+        }
+    }
+    
+    /**
      * 更新剔除统计信息
      */
     private static void updateCullingStats(double checkTime) {
@@ -189,6 +201,8 @@ public class DebugManager {
         }
     }
     
+    // ...existing code...
+    
     /**
      * 重置性能统计
      */
@@ -199,6 +213,12 @@ public class DebugManager {
         recentCheckTimes.clear();
         debugInfo.clear();
         performanceTimers.clear();
+        
+        // 重置简化的方块统计
+        totalBlockChecks = 0;
+        blocksVisible = 0;
+        blocksCulled = 0;
+        lastBlockStatsUpdate = 0;
         
         EnclosedSpaceRenderCulling.LOGGER.info("Debug statistics reset");
     }
@@ -253,27 +273,67 @@ public class DebugManager {
     public static void cleanupExpiredData() {
         long currentTime = System.currentTimeMillis();
         
-        // 清理过期的实体检查记录
-        lastEntityCheck.entrySet().removeIf(entry -> 
-            currentTime - entry.getValue() > 60000); // 1分钟过期
-        
-        // 清理对应的实体剔除原因
-        entityCullingReasons.entrySet().removeIf(entry -> 
-            !lastEntityCheck.containsKey(entry.getKey()));
-        
-        // 清理过期的距离剔除记录
-        if (distanceCullingReasons.size() > 5) {
-            distanceCullingReasons.clear();
-        }
-        
-        // 清理过期的房间连通性记录
-        if (roomConnectivity.size() > 10) {
-            roomConnectivity.clear();
-        }
-        
         // 清理过期的日志时间记录
         lastLogTime.entrySet().removeIf(entry -> 
             currentTime - entry.getValue() > 300000); // 5分钟过期
+    }
+    
+    /**
+     * 强制触发房间检测（用于调试）
+     */
+    public static void triggerRoomDetection() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.level == null) return;
+        
+        BlockPos playerPos = mc.player.blockPosition();
+        try {
+            // 强制检测玩家周围的房间
+            RoomManager.getRoomIdAt(mc.level, playerPos);
+            
+            // 检测玩家周围区块范围内的房间（基于玩家渲染距离，最小1个区块）
+            int renderDistance = Math.max(1, mc.options.renderDistance().get());
+            int chunkRange = Math.min(renderDistance, 4); // 最多检测4个区块范围
+            
+            for (int chunkX = -chunkRange; chunkX <= chunkRange; chunkX++) {
+                for (int chunkZ = -chunkRange; chunkZ <= chunkRange; chunkZ++) {
+                    for (int y = -1; y <= 1; y++) {
+                        BlockPos checkPos = playerPos.offset(chunkX * 16, y, chunkZ * 16);
+                        RoomManager.getRoomIdAt(mc.level, checkPos);
+                    }
+                }
+            }
+            
+            setDebugInfo("room_detection", "已触发(" + chunkRange + "区块)");
+        } catch (Exception e) {
+            setDebugInfo("room_detection_error", e.getMessage());
+        }
+    }
+    
+    /**
+     * 获取性能报告
+     */
+    public static String getPerformanceReport() {
+        StringBuilder report = new StringBuilder();
+        report.append("=== 封闭空间剔除性能报告 ===\n");
+        report.append("总检查次数: ").append(totalCullingChecks).append("\n");
+        report.append("成功剔除次数: ").append(successfulCulls).append("\n");
+        
+        if (totalCullingChecks > 0) {
+            report.append("剔除成功率: ").append(String.format("%.2f%%", 
+                (double) successfulCulls / totalCullingChecks * 100)).append("\n");
+        }
+        
+        if (averageCheckTime > 0) {
+            report.append("平均检查耗时: ").append(String.format("%.3fms", averageCheckTime)).append("\n");
+        }
+        
+        report.append("调试信息条目: ").append(debugInfo.size()).append("\n");
+        report.append("活跃计时器: ").append(performanceTimers.size()).append("\n");
+        
+        // 添加内存使用情况
+        report.append("\n").append(getMemoryUsage()).append("\n");
+        
+        return report.toString();
     }
     
     /**
@@ -353,113 +413,6 @@ public class DebugManager {
     }
     
     /**
-     * 记录实体剔除信息
-     */
-    public static void trackEntityCulling(String entityId, String entityType, BlockPos entityPos, 
-                                        BlockPos playerPos, boolean culled, String reason) {
-        if (!ModConfig.COMMON.enableDebug.get()) {
-            return;
-        }
-        
-        totalEntityChecks++;
-        if (culled) {
-            culledEntities++;
-        }
-        
-        String key = entityId + "_" + entityType;
-        String info = String.format("%s@%s %s: %s", 
-            entityType, entityPos.toShortString(), 
-            culled ? "被剔除" : "可见", reason);
-        
-        entityCullingReasons.put(key, info);
-        lastEntityCheck.put(key, System.currentTimeMillis());
-        
-        // 跟踪房间信息
-        try {
-            Integer playerRoomId = RoomManager.getRoomIdAt(Minecraft.getInstance().level, playerPos);
-            Integer entityRoomId = RoomManager.getRoomIdAt(Minecraft.getInstance().level, entityPos);
-            
-            lastPlayerRoom = playerRoomId != null ? "房间" + playerRoomId : "未识别";
-            lastTargetRoom = entityRoomId != null ? "房间" + entityRoomId : "未识别";
-            
-            String connectivityKey = "连通性_" + playerRoomId + "_to_" + entityRoomId;
-            String connectivityInfo = String.format("玩家:%s -> 实体:%s", lastPlayerRoom, lastTargetRoom);
-            roomConnectivity.put(connectivityKey, connectivityInfo);
-            
-        } catch (Exception e) {
-            roomConnectivity.put("error", "房间检测错误: " + e.getMessage());
-        }
-        
-        // 清理过期记录（保留最近1分钟的记录）
-        long now = System.currentTimeMillis();
-        lastEntityCheck.entrySet().removeIf(entry -> now - entry.getValue() > 60000);
-        entityCullingReasons.entrySet().removeIf(entry -> 
-            !lastEntityCheck.containsKey(entry.getKey()));
-    }
-    
-    /**
-     * 强制触发房间检测（用于调试）
-     */
-    public static void triggerRoomDetection() {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.level == null) return;
-        
-        BlockPos playerPos = mc.player.blockPosition();
-        try {
-            // 强制检测玩家周围的房间
-            RoomManager.getRoomIdAt(mc.level, playerPos);
-            
-            // 检测玩家周围16个方块范围内的房间
-            for (int x = -8; x <= 8; x += 4) {
-                for (int z = -8; z <= 8; z += 4) {
-                    for (int y = -4; y <= 4; y += 2) {
-                        BlockPos checkPos = playerPos.offset(x, y, z);
-                        RoomManager.getRoomIdAt(mc.level, checkPos);
-                    }
-                }
-            }
-            
-            setDebugInfo("room_detection", "已触发");
-        } catch (Exception e) {
-            setDebugInfo("room_detection_error", e.getMessage());
-        }
-    }
-    
-    /**
-     * 获取性能报告
-     */
-    public static String getPerformanceReport() {
-        StringBuilder report = new StringBuilder();
-        report.append("=== 封闭空间剔除性能报告 ===\n");
-        report.append("总检查次数: ").append(totalCullingChecks).append("\n");
-        report.append("成功剔除次数: ").append(successfulCulls).append("\n");
-        
-        if (totalCullingChecks > 0) {
-            report.append("剔除成功率: ").append(String.format("%.2f%%", 
-                (double) successfulCulls / totalCullingChecks * 100)).append("\n");
-        }
-        
-        if (averageCheckTime > 0) {
-            report.append("平均检查耗时: ").append(String.format("%.3fms", averageCheckTime)).append("\n");
-        }
-        
-        if (totalEntityChecks > 0) {
-            report.append("实体检查次数: ").append(totalEntityChecks).append("\n");
-            report.append("被剔除实体: ").append(culledEntities).append("\n");
-            report.append("实体剔除率: ").append(String.format("%.2f%%", 
-                (double) culledEntities / totalEntityChecks * 100)).append("\n");
-        }
-        
-        report.append("调试信息条目: ").append(debugInfo.size()).append("\n");
-        report.append("活跃计时器: ").append(performanceTimers.size()).append("\n");
-        
-        // 添加内存使用情况
-        report.append("\n").append(getMemoryUsage()).append("\n");
-        
-        return report.toString();
-    }
-
-    /**
      * 渲染调试信息到屏幕
      */
     @OnlyIn(Dist.CLIENT)
@@ -490,7 +443,7 @@ public class DebugManager {
      */
     private static void renderSimpleDebugInfo(GuiGraphics graphics) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.level == null) return;
+        if (mc.player == null || mc.level == null || mc.font == null) return;
         
         int x = 10;
         int y = 10;
@@ -501,11 +454,22 @@ public class DebugManager {
         graphics.drawString(mc.font, Component.literal("§e§l[封闭空间剔除 - 调试模式]"), x, currentY, 0xFFFFFF);
         currentY += lineHeight + 3;
         
-        // 基本统计
-        String stats = String.format("§7方块检查: §f%d §7| 剔除: §a%d §7| 成功率: §e%.1f%%", 
-            totalCullingChecks, successfulCulls, 
-            totalCullingChecks > 0 ? (double) successfulCulls / totalCullingChecks * 100 : 0);
-        graphics.drawString(mc.font, Component.literal(stats), x, currentY, 0xFFFFFF);
+        // 基本统计 - 使用简化的方块统计
+        String blockStats;
+        if (!ModConfig.COMMON.enableCulling.get()) {
+            blockStats = "§7方块剔除: §c已关闭";
+        } else {
+            String totalBlockChecksStr = formatLargeNumber(totalBlockChecks);
+            String blocksCulledStr = formatLargeNumber(blocksCulled);
+            if (totalBlockChecks > 0) {
+                blockStats = String.format("§7方块检查: §f%s §7| 剔除: §a%s §7| 成功率: §e%.1f%%", 
+                    totalBlockChecksStr, blocksCulledStr, 
+                    (double) blocksCulled / totalBlockChecks * 100);
+            } else {
+                blockStats = "§7方块检查: §f0 §7| 等待数据...";
+            }
+        }
+        graphics.drawString(mc.font, Component.literal(blockStats), x, currentY, 0xFFFFFF);
         currentY += lineHeight;
         
         // 性能信息
@@ -515,15 +479,16 @@ public class DebugManager {
             currentY += lineHeight;
         }
         
-        // 房间信息
+        // 房间信息 - 房间ID是标识符，不需要格式化
         try {
             BlockPos playerPos = mc.player.blockPosition();
             Integer roomId = RoomManager.getRoomIdAt(mc.level, playerPos);
             Integer groupId = RoomManager.getGroupIdAt(mc.level, playerPos);
             
-            String roomInfo = String.format("§7房间ID: §f%s §7| 组ID: §f%s", 
-                roomId != null ? roomId.toString() : "§c未知",
-                groupId != null ? groupId.toString() : "§c未知");
+            String roomIdStr = roomId != null ? roomId.toString() : "§c未知";
+            String groupIdStr = groupId != null ? groupId.toString() : "§c未知";
+            
+            String roomInfo = String.format("§7房间ID: §f%s §7| 组ID: §f%s", roomIdStr, groupIdStr);
             graphics.drawString(mc.font, Component.literal(roomInfo), x, currentY, 0xFFFFFF);
             currentY += lineHeight;
             
@@ -533,25 +498,25 @@ public class DebugManager {
             currentY += lineHeight;
             
         } catch (Exception e) {
-            graphics.drawString(mc.font, Component.literal("§c房间信息获取失败: " + e.getMessage()), x, currentY, 0xFFFFFF);
-            currentY += lineHeight;
-        }
-        
-        // 实体剔除统计
-        if (totalEntityChecks > 0) {
-            String entityStats = String.format("§7实体检查: §f%d §7| 剔除: §c%d §7| 剔除率: §e%.1f%%",
-                totalEntityChecks, culledEntities,
-                (double) culledEntities / totalEntityChecks * 100);
-            graphics.drawString(mc.font, Component.literal(entityStats), x, currentY, 0xFFFFFF);
+            graphics.drawString(mc.font, Component.literal("§c房间信息获取失败: " + (e.getMessage() != null ? e.getMessage() : "未知错误")), x, currentY, 0xFFFFFF);
             currentY += lineHeight;
         }
         
         // 环境信息
         try {
             updateEnvironmentInfo(mc.level, mc.player.blockPosition());
-            String envInfo = String.format("§7环境: §f%s §7(光照: §f%d§7)", 
-                environmentType, currentLightLevel);
-            graphics.drawString(mc.font, Component.literal(envInfo), x, currentY, 0xFFFFFF);
+            String envInfo;
+            int color = 0xFFFFFF;
+            if (currentLightLevel == 0) {
+                envInfo = "§7环境: §9瞎了 (光照: 0)";
+                color = 0x3399FF; // 蓝色
+            } else if (currentLightLevel >= 15) {
+                envInfo = "§7环境: §f亮 (光照: 15)";
+                color = 0xFFFFFF; // 白色
+            } else {
+                envInfo = String.format("§7环境: §f%s §7(光照: §f%d§7)", environmentType, currentLightLevel);
+            }
+            graphics.drawString(mc.font, Component.literal(envInfo), x, currentY, color);
             currentY += lineHeight;
         } catch (Exception e) {
             graphics.drawString(mc.font, Component.literal("§c环境信息错误"), x, currentY, 0xFFFFFF);
@@ -569,11 +534,19 @@ public class DebugManager {
             currentY += lineHeight;
         }
         
-        // 配置状态
-        String configStatus = String.format("§7剔除功能: %s §7| 热重载: %s", 
-            ModConfig.COMMON.enableCulling.get() ? "§a启用" : "§c禁用",
-            ModConfig.COMMON.enableHotReload.get() ? "§a启用" : "§c禁用");
-        graphics.drawString(mc.font, Component.literal(configStatus), x, currentY, 0xFFFFFF);
+        // 配置状态和剔除关闭原因
+        String configStatus;
+        int configColor = 0xFFFFFF;
+        
+        if (!ModConfig.COMMON.enableCulling.get()) {
+            configStatus = "§7剔除功能: §c禁用 (配置关闭)";
+            configColor = 0xFF6666;
+        } else {
+            configStatus = String.format("§7剔除功能: %s §7| 热重载: %s", 
+                ModConfig.COMMON.enableCulling.get() ? "§a启用" : "§c禁用", 
+                ModConfig.COMMON.enableHotReload.get() ? "§a启用" : "§c禁用");
+        }
+        graphics.drawString(mc.font, Component.literal(configStatus), x, currentY, configColor);
     }
 
     /**
@@ -607,5 +580,46 @@ public class DebugManager {
         } catch (Exception e) {
             environmentType = "错误";
         }
+    }
+
+    /**
+     * 获取调试信息映射
+     */
+    public static Map<String, Object> getDebugInfo() {
+        return debugInfo;
+    }
+    
+    /**
+     * 安全地获取配置值，避免在配置未加载时崩溃
+     */
+    public static boolean safeGetConfigBool(java.util.function.Supplier<Boolean> configGetter, boolean defaultValue) {
+        try {
+            return configGetter.get();
+        } catch (Exception e) {
+            // 配置还没有加载完成，返回默认值
+            return defaultValue;
+        }
+    }
+    
+    /**
+     * 安全地获取配置值，避免在配置未加载时崩溃
+     */
+    public static int safeGetConfigInt(java.util.function.Supplier<Integer> configGetter, int defaultValue) {
+        try {
+            return configGetter.get();
+        } catch (Exception e) {
+            // 配置还没有加载完成，返回默认值
+            return defaultValue;
+        }
+    }
+    
+    /**
+     * 格式化大数字，1000以上用k单位表示
+     */
+    private static String formatLargeNumber(long number) {
+        if (number >= 1000) {
+            return String.format("%.1fk", number / 1000.0);
+        }
+        return String.valueOf(number);
     }
 }

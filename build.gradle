@@ -237,7 +237,8 @@ tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
     options.compilerArgs.addAll([
         '-Xlint:deprecation',
-        '-Xlint:unchecked'
+        '-Xlint:unchecked',
+        '-parameters' // 保留参数名
     ])
     
     // 提高编译性能
@@ -278,4 +279,12 @@ tasks.register('debugInfo') {
 // 构建前清理
 tasks.named('build').configure {
     dependsOn 'cleanDebug'
+}
+
+// 确保reobf过程不会截断包名
+reobf {
+    jar {
+        // 使用默认的映射配置，避免包名截断
+        // mappingType 在新版本中已不再需要手动指定
+    }
 }

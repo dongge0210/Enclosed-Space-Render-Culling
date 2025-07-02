@@ -11,10 +11,10 @@ import com.dongge0210.enclosedculling.config.ModConfig;
  */
 public class LODManager {
     
-    // LOD距离阈值
-    private static final float LOD_DISTANCE_1 = 32.0f;   // 高质量
-    private static final float LOD_DISTANCE_2 = 64.0f;   // 中等质量
-    private static final float LOD_DISTANCE_3 = 128.0f;  // 低质量
+    // LOD距离阈值 - 扩大渲染距离
+    private static final float LOD_DISTANCE_1 = 48.0f;   // 高质量（从32提升到48）
+    private static final float LOD_DISTANCE_2 = 96.0f;   // 中等质量（从64提升到96）
+    private static final float LOD_DISTANCE_3 = 192.0f;  // 低质量（从128提升到192）
     
     // LOD级别枚举
     public enum LODLevel {

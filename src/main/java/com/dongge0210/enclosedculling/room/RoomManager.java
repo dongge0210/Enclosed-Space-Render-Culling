@@ -1,18 +1,27 @@
 package com.dongge0210.enclosedculling.room;
 
-import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.registries.ForgeRegistries;
-
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Properties;
+import java.util.Queue;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.registries.ForgeRegistries;
 
 public class RoomManager {
     // --- 房间与连通群 ---
@@ -106,9 +115,11 @@ public class RoomManager {
                 }
             }
             
+            // 记录剔除统计（不受频率限制）
+            com.dongge0210.enclosedculling.debug.DebugManager.recordCullingResult(!visible);
+            
             // 减少调试记录频率
             if (shouldLogDebugInfo("culling_result")) {
-                com.dongge0210.enclosedculling.debug.DebugManager.recordCullingResult(!visible);
                 com.dongge0210.enclosedculling.debug.DebugManager.logCullingDetails(target, !visible, reason);
             }
             
@@ -136,7 +147,7 @@ public class RoomManager {
      */
     private static boolean shouldLogDebugInfo(String logType) {
         try {
-            if (!com.dongge0210.enclosedculling.config.ModConfig.COMMON.enableDebugMode.get()) {
+            if (!com.dongge0210.enclosedculling.config.ModConfig.COMMON.enableDebug.get()) {
                 return false;
             }
             

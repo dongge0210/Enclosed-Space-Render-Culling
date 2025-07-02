@@ -27,7 +27,7 @@ public class CullingRenderer {
     // === 配置常量 ===
     private static final int CACHE_SIZE = 4096;
     private static final int CHECK_RADIUS = 3;
-    private static final double CLOSE_DISTANCE_THRESHOLD = 16.0;
+    private static final double CLOSE_DISTANCE_THRESHOLD = 32.0; // 从16.0扩大到32.0
     
     // === LRU缓存 ===
     private static final LinkedHashMap<BlockPos, Boolean> occlusionCache = new LinkedHashMap<>(CACHE_SIZE, 0.75f, true) {
@@ -51,6 +51,8 @@ public class CullingRenderer {
         // 1. 视锥剔除检查
         if (!FrustumCuller.isBlockInFrustum(pos)) {
             cacheResult(pos, true);
+            // 记录方块剔除统计
+            com.dongge0210.enclosedculling.debug.DebugManager.recordBlockCheck(false);
             return true;
         }
         
@@ -58,30 +60,41 @@ public class CullingRenderer {
         LODManager.LODLevel lod = LODManager.calculateBlockLOD(pos, playerPos);
         if (lod == LODManager.LODLevel.CULLED) {
             cacheResult(pos, true);
+            // 记录方块剔除统计
+            com.dongge0210.enclosedculling.debug.DebugManager.recordBlockCheck(false);
             return true;
         }
         
         // 3. 房间系统快速判断
         if (!RoomManager.isPositionVisible(world, pos, BlockPos.containing(playerPos))) {
             cacheResult(pos, true);
+            // 记录方块剔除统计
+            com.dongge0210.enclosedculling.debug.DebugManager.recordBlockCheck(false);
             return true;
         }
         
         // 4. 检查缓存
         Boolean cached = occlusionCache.get(pos);
         if (cached != null) {
+            // 记录方块剔除统计（缓存命中）
+            com.dongge0210.enclosedculling.debug.DebugManager.recordBlockCheck(!cached);
             return cached;
         }
         
         // 5. 近距离不剔除，确保玩家附近的物体始终可见
         if (pos.distSqr(BlockPos.containing(playerPos)) < CLOSE_DISTANCE_THRESHOLD) {
             cacheResult(pos, false);
+            // 记录方块剔除统计
+            com.dongge0210.enclosedculling.debug.DebugManager.recordBlockCheck(true);
             return false;
         }
         
         // 6. 执行详细的遮挡检测
         boolean isOccluded = checkEnclosure(world, pos) && !hasLineOfSight(world, pos, playerPos);
         cacheResult(pos, isOccluded);
+        
+        // 记录方块剔除统计
+        com.dongge0210.enclosedculling.debug.DebugManager.recordBlockCheck(!isOccluded);
         
         // 7. 添加到批渲染（如果未被遮挡）
         if (!isOccluded) {
@@ -245,7 +258,7 @@ public class CullingRenderer {
         
         // 4. 距离检查
         double distance = playerPos.distanceToSqr(entity.position());
-        if (distance > 256.0) { // 16格以外的实体进行更详细检查
+        if (distance > 1024.0) { // 从256.0(16格)增加到1024.0(32格)的实体进行更详细检查
             return isPositionOccluded(world, entityPos, playerPos);
         }
         

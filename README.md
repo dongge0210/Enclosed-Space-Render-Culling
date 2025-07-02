@@ -2,7 +2,11 @@
 
 > **完整的开发文档和总结**: 请查看 **[SUMMARY/](./SUMMARY/)** 文件夹，包含详细的功能实现、GPU优化、兼容性处理等完整文档。
 
-<span style="color: red; font-size: 24px; font-weight: bold;">重要警告:此模组仅能在正式环境中使用,在开发环境（runClient）中将会导致 Mixin 报错！</span>
+---
+
+~~<span style="color: red; font-size: 20px; font-weight: bold; text-decoration: line-through; text-decoration-style: wavy; text-decoration-color: #000;">重要警告:此模组仅能在正式环境中使用,在开发环境（runClient）中将会导致 Mixin 报错！</span>~~
+
+> **更新**: ✅ 该警告已过时！模组现已完全兼容开发环境，可以在 `runClient` 中正常使用。
 
 封闭空间渲染优化 (Enclosed Space Render Culling)
 
@@ -39,24 +43,9 @@
 - 仅对不可见房间内的高负载方块实体暂停tick
 - 保证游戏功能完整性的同时提升性能
 
-### 兼容性
-
-#### 依赖模组
-- Minecraft: 1.20.1
-- Forge: 47.4.0+
-- Create: 6.0.6+ (必需)
-- Flywheel: 1.0.4+ (通过Create包含)
-- Ponder: 1.0.80+ (通过Create包含)
-- MixinExtras: 0.4.1 (运行时依赖)
-
-#### 可选兼容
-- Mekanism
-- Thermal Expansion
-- 其他使用大量方块实体的模组
-
 ### 性能提升
 
-- FPS提升:减少不必要的方块实体渲染,优化封闭空间的几何计算,智能剔除不可见区域
+- FPS提升:减少不必要的方块渲染,优化封闭空间的几何计算,智能剔除不可见区域
 - CPU优化:暂停不可见区域的方块实体计算,减少物理模拟和逻辑更新
 - 内存效率:智能缓存减少重复计算,LRU策略管理内存使用
 
@@ -65,8 +54,8 @@
 - 开发者: dongge0210
 - 许可证: MIT
 - 版本: x
-- 构建工具: Gradle + ForgeGradle 6.0
-- 开发环境: Java 17 + IntelliJ IDEA
+- 构建工具: Gradle + ForgeGradle 8.8
+- 开发环境: Java 17/21
 
 ### 构建说明
 

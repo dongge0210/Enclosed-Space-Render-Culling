@@ -42,11 +42,6 @@ public class ModConfig {
         // 新增：更简洁的调试选项
         public final ForgeConfigSpec.BooleanValue enableDebug;
         
-        // 实体渲染Beta功能
-        public final ForgeConfigSpec.BooleanValue enableEntityRendering;
-        public final ForgeConfigSpec.BooleanValue enableNightVisionSupport;
-        public final ForgeConfigSpec.BooleanValue enableRaidDetection;
-        
         // 热重载选项
         public final ForgeConfigSpec.BooleanValue enableHotReload;
         public final ForgeConfigSpec.BooleanValue enableScriptSupport;
@@ -57,7 +52,6 @@ public class ModConfig {
         public final ForgeConfigSpec.DoubleValue cullingCheckTimeLimit;
         
         // 兼容性选项
-        public final ForgeConfigSpec.BooleanValue forceEntityCulling;
         public final ForgeConfigSpec.BooleanValue showCompatibilityWarnings;
         public final ForgeConfigSpec.BooleanValue autoDisableConflictingFeatures;
         
@@ -84,12 +78,6 @@ public class ModConfig {
             enableDebug = builder.comment("是否启用调试界面（简化版）").define("enableDebug", false);
             builder.pop();
             
-            builder.comment("实体渲染Beta功能").push("entity_rendering");
-            enableEntityRendering = builder.comment("是否启用智能实体渲染（Beta功能）").define("enableEntityRendering", true);
-            enableNightVisionSupport = builder.comment("是否启用夜视效果支持").define("enableNightVisionSupport", true);
-            enableRaidDetection = builder.comment("是否启用村庄袭击检测").define("enableRaidDetection", true);
-            builder.pop();
-            
             builder.comment("热重载功能设置").push("hotreload");
             enableHotReload = builder.comment("是否启用热重载").define("enableHotReload", true);
             enableScriptSupport = builder.comment("是否启用脚本支持").define("enableScriptSupport", true);
@@ -102,7 +90,6 @@ public class ModConfig {
             builder.pop();
             
             builder.comment("兼容性设置").push("compatibility");
-            forceEntityCulling = builder.comment("强制启用实体剔除（即使检测到EntityCulling MOD）").define("forceEntityCulling", false);
             showCompatibilityWarnings = builder.comment("显示兼容性警告信息").define("showCompatibilityWarnings", true);
             autoDisableConflictingFeatures = builder.comment("自动禁用冲突功能").define("autoDisableConflictingFeatures", true);
             builder.pop();
